@@ -39,7 +39,7 @@ main :: proc() {
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "voyager")
 	defer rl.CloseWindow()
 
-	cwd := get_homedir()
+	cwd := strings.clone(get_homedir())
 	c_cwd := strings.clone_to_cstring(cwd)
 	dir_files := load_dir_files(c_cwd)
 
@@ -74,7 +74,8 @@ main :: proc() {
 				color := rl.Color{200, 200, 200, 100}
 				if rl.CheckCollisionPointRec(mouse_pos, rect) {
 					if mouse_clicked && rl.DirectoryExists(c_path) {
-						cwd = path
+						delete(cwd)
+						cwd = strings.clone(path)
 						delete(c_cwd)
 						c_cwd = strings.clone_to_cstring(cwd)
 						for path in dir_files do delete(path)
@@ -95,11 +96,30 @@ main :: proc() {
 
 		parts := strings.split(cwd, "/")
 		x: i32 = 0
-		for part in parts {
+		for part, i in parts {
 			c_part := strings.clone_to_cstring(part)
 			defer delete(c_part)
+			part_size := rl.MeasureText(c_part, FONT_SIZE)
+			rect := rl.Rectangle{f32(x), 0, f32(part_size), FONT_SIZE}
+			if rl.CheckCollisionPointRec(mouse_pos, rect) {
+				if mouse_clicked && i != len(parts) - 1 {
+					up_until := parts[:i + 1]
+					new_cwd := strings.join(up_until, "/")
+					delete(cwd)
+					cwd = new_cwd
+					delete(c_cwd)
+					c_cwd = strings.clone_to_cstring(cwd)
+					for path in dir_files do delete(path)
+					delete(dir_files)
+					dir_files = load_dir_files(c_cwd)
+					break
+				}
+				color := rl.LIME
+				color.a = 100
+				rl.DrawRectangleRec(rect, color)
+			}
 			rl.DrawText(c_part, x, 0, FONT_SIZE, rl.WHITE)
-			x += rl.MeasureText(c_part, FONT_SIZE)
+			x += part_size
 			rl.DrawText(" / ", x, 0, FONT_SIZE, rl.WHITE)
 			x += rl.MeasureText(" / ", FONT_SIZE)
 		}
