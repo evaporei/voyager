@@ -41,13 +41,14 @@ main :: proc() {
 	y_offset: f32 = 0
 
 	for !rl.WindowShouldClose() {
+		y: f32 = y_offset
+		y_offset += rl.GetMouseWheelMove() * scroll_speed * rl.GetFrameTime()
+
+		mouse := rl.GetMousePosition()
+
 		rl.BeginDrawing()
 		defer rl.EndDrawing()
 		rl.ClearBackground(rl.BLACK)
-
-		y: f32 = y_offset
-
-		y_offset += rl.GetMouseWheelMove() * scroll_speed * rl.GetFrameTime()
 
 		for path, i in dir_files {
 			file := rl.GetFileName(path)
@@ -58,10 +59,14 @@ main :: proc() {
 
 			// culling
 			if y >= 0 && y <= WINDOW_HEIGHT {
-				rl.DrawRectangleRec(
-					rl.Rectangle{0, y - FONT_SIZE, WINDOW_WIDTH, FONT_SIZE},
-					i % 2 == 0 ? rl.Color{200, 200, 200, 100} : rl.Color{200, 200, 200, 0},
-				)
+				rect := rl.Rectangle{0, y, WINDOW_WIDTH, FONT_SIZE}
+				color := rl.Color{200, 200, 200, 100}
+				if rl.CheckCollisionPointRec(mouse, rect) {
+					color.rgb = rl.LIME.rgb
+				} else if i % 2 != 0 {
+					color.a = 0
+				}
+				rl.DrawRectangleRec(rect, color)
 				rl.DrawTextEx(font, file, {0, y}, FONT_SIZE, FONT_SPACING, rl.WHITE)
 			}
 		}
