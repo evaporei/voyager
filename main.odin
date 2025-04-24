@@ -92,7 +92,18 @@ main :: proc() {
 		}
 
 		rl.DrawRectangle(0, 0, WINDOW_WIDTH, 20, rl.BLACK)
-		rl.DrawText(c_cwd, 0, 0, FONT_SIZE, rl.WHITE)
+
+		parts := strings.split(cwd, "/")
+		x: i32 = 0
+		for part in parts {
+			c_part := strings.clone_to_cstring(part)
+			defer delete(c_part)
+			rl.DrawText(c_part, x, 0, FONT_SIZE, rl.WHITE)
+			x += rl.MeasureText(c_part, FONT_SIZE)
+			rl.DrawText(" / ", x, 0, FONT_SIZE, rl.WHITE)
+			x += rl.MeasureText(" / ", FONT_SIZE)
+		}
+
 		rl.DrawLine(0, FONT_SIZE, WINDOW_WIDTH, FONT_SIZE, rl.SKYBLUE)
 	}
 }
