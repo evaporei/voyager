@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:os"
 import "core:slice"
 import "core:strings"
+import "core:sys/posix"
 
 import rl "vendor:raylib"
 
@@ -32,6 +33,21 @@ load_dir_files :: proc(dir: cstring) -> []string {
 		return xl < yl
 	})
 	return dir_files
+}
+
+// for now just macos
+open_file :: proc(file: cstring) {
+	pid := posix.fork()
+	if pid < 0 {
+		fmt.println("kaboom man")
+		os.exit(1)
+	} else if pid == 0 {
+		// fmt.println("child")
+		args := []cstring{"open", file, nil}
+		os.exit(int(posix.execv("/usr/bin/open", raw_data(args))))
+	} else {
+		// fmt.println("woo parent!")
+	}
 }
 
 main :: proc() {
@@ -73,15 +89,19 @@ main :: proc() {
 				rect := rl.Rectangle{0, y, WINDOW_WIDTH, FONT_SIZE}
 				color := rl.Color{200, 200, 200, 100}
 				if rl.CheckCollisionPointRec(mouse_pos, rect) {
-					if mouse_clicked && rl.DirectoryExists(c_path) {
-						delete(cwd)
-						cwd = strings.clone(path)
-						delete(c_cwd)
-						c_cwd = strings.clone_to_cstring(cwd)
-						for path in dir_files do delete(path)
-						delete(dir_files)
-						dir_files = load_dir_files(c_cwd)
-						break
+					if mouse_clicked {
+						if rl.DirectoryExists(c_path) {
+							delete(cwd)
+							cwd = strings.clone(path)
+							delete(c_cwd)
+							c_cwd = strings.clone_to_cstring(cwd)
+							for path in dir_files do delete(path)
+							delete(dir_files)
+							dir_files = load_dir_files(c_cwd)
+							break
+						} else {
+							open_file(c_path)
+						}
 					}
 					color.rgb = rl.LIME.rgb
 				} else if i % 2 != 0 {
