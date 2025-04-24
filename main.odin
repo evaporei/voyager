@@ -57,9 +57,12 @@ main :: proc() {
 			y += FONT_SIZE
 
 			// culling
-			if y <= WINDOW_HEIGHT {
+			if y >= 0 && y <= WINDOW_HEIGHT {
+				rl.DrawRectangleRec(
+					rl.Rectangle{0, y - FONT_SIZE, WINDOW_WIDTH, FONT_SIZE},
+					i % 2 == 0 ? rl.Color{200, 200, 200, 100} : rl.Color{200, 200, 200, 0},
+				)
 				rl.DrawTextEx(font, file, {0, y}, FONT_SIZE, FONT_SPACING, rl.WHITE)
-				rl.DrawLineEx({0, y}, {WINDOW_WIDTH, y}, 1, rl.Color{200, 200, 200, 100})
 			}
 		}
 
