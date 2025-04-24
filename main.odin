@@ -2,7 +2,7 @@ package voyage
 
 import "core:fmt"
 import "core:os"
-// import "core:slice"
+import "core:slice"
 import "core:strings"
 
 import rl "vendor:raylib"
@@ -26,7 +26,9 @@ main :: proc() {
 	cwd := get_homedir()
 	cwd_c := strings.clone_to_cstring(cwd)
 
-	dir_files := rl.LoadDirectoryFiles(cwd_c)
+	c_dir_files := rl.LoadDirectoryFiles(cwd_c)
+	dir_files := c_dir_files.paths[:c_dir_files.count]
+	slice.sort(dir_files)
 
 	// for i in 0 ..< dir_files.count {
 	// 	path := rl.GetFileName(dir_files.paths[i])
@@ -42,13 +44,16 @@ main :: proc() {
 		// rl.DrawRectangle(0, 0, WINDOW_WIDTH, 20, rl.Color{1.0, 0.0, 0.0, 1.0})
 		rl.DrawText(cwd_c, 0, y, FONT_SIZE, rl.WHITE)
 
-		for i in 0 ..< dir_files.count {
+		for path, i in dir_files {
+			file := rl.GetFileName(path)
+			if string(file)[0] == '.' {
+				continue
+			}
 			y += FONT_SIZE
-			path := dir_files.paths[i]
 
 			// culling
 			if y <= WINDOW_HEIGHT {
-				rl.DrawText(rl.GetFileName(path), 0, y, FONT_SIZE, rl.WHITE)
+				rl.DrawText(file, 0, y, FONT_SIZE, rl.WHITE)
 				rl.DrawLine(0, FONT_SIZE * i32(i), WINDOW_WIDTH, FONT_SIZE * i32(i), rl.LIGHTGRAY)
 			}
 		}
