@@ -28,7 +28,11 @@ main :: proc() {
 
 	c_dir_files := rl.LoadDirectoryFiles(cwd_c)
 	dir_files := c_dir_files.paths[:c_dir_files.count]
-	slice.sort(dir_files)
+	slice.sort_by(dir_files, proc(a: cstring, b: cstring) -> bool {
+		x, y := string(a), string(b)
+		xl, yl := strings.to_lower(x), strings.to_lower(y)
+		return xl < yl
+	})
 
 	// for i in 0 ..< dir_files.count {
 	// 	path := rl.GetFileName(dir_files.paths[i])
