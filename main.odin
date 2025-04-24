@@ -9,6 +9,7 @@ import rl "vendor:raylib"
 
 WINDOW_WIDTH, WINDOW_HEIGHT :: 1280, 720
 FONT_SIZE :: 20
+FONT_SPACING :: FONT_SIZE / 10
 
 get_homedir :: proc() -> string {
 	when ODIN_OS == .Windows {
@@ -34,24 +35,19 @@ main :: proc() {
 		return xl < yl
 	})
 
-	// for i in 0 ..< dir_files.count {
-	// 	path := rl.GetFileName(dir_files.paths[i])
-	// 	fmt.println(strings.clone_from_cstring(path))
-	// }
+	font := rl.GetFontDefault()
 
-	scroll_speed: f32 = 600
-	y_offset: i32 = 0
-
-	// rl.SetTargetFPS(60)
+	scroll_speed: f32 = 2000
+	y_offset: f32 = 0
 
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 		defer rl.EndDrawing()
 		rl.ClearBackground(rl.BLACK)
 
-		y: i32 = y_offset
+		y: f32 = y_offset
 
-		y_offset += i32(rl.GetMouseWheelMove() * scroll_speed * rl.GetFrameTime())
+		y_offset += rl.GetMouseWheelMove() * scroll_speed * rl.GetFrameTime()
 
 		for path, i in dir_files {
 			file := rl.GetFileName(path)
@@ -62,8 +58,8 @@ main :: proc() {
 
 			// culling
 			if y <= WINDOW_HEIGHT {
-				rl.DrawText(file, 0, y, FONT_SIZE, rl.WHITE)
-				rl.DrawLine(0, FONT_SIZE * i32(i), WINDOW_WIDTH, FONT_SIZE * i32(i), rl.LIGHTGRAY)
+				rl.DrawTextEx(font, file, {0, y}, FONT_SIZE, FONT_SPACING, rl.WHITE)
+				rl.DrawLineEx({0, y}, {WINDOW_WIDTH, y}, 1, rl.Color{200, 200, 200, 100})
 			}
 		}
 
