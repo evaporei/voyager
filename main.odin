@@ -39,14 +39,19 @@ main :: proc() {
 	// 	fmt.println(strings.clone_from_cstring(path))
 	// }
 
+	scroll_speed: f32 = 600
+	y_offset: i32 = 0
+
+	// rl.SetTargetFPS(60)
+
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 		defer rl.EndDrawing()
 		rl.ClearBackground(rl.BLACK)
 
-		y: i32 = 0
-		// rl.DrawRectangle(0, 0, WINDOW_WIDTH, 20, rl.Color{1.0, 0.0, 0.0, 1.0})
-		rl.DrawText(cwd_c, 0, y, FONT_SIZE, rl.WHITE)
+		y: i32 = y_offset
+
+		y_offset += i32(rl.GetMouseWheelMove() * scroll_speed * rl.GetFrameTime())
 
 		for path, i in dir_files {
 			file := rl.GetFileName(path)
@@ -62,6 +67,8 @@ main :: proc() {
 			}
 		}
 
+		rl.DrawRectangle(0, 0, WINDOW_WIDTH, 20, rl.BLACK)
+		rl.DrawText(cwd_c, 0, 0, FONT_SIZE, rl.WHITE)
 		rl.DrawLine(0, FONT_SIZE, WINDOW_WIDTH, FONT_SIZE, rl.SKYBLUE)
 	}
 }
