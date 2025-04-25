@@ -165,6 +165,7 @@ main :: proc() {
 	cwd := strings.clone(base_dir)
 	c_cwd := strings.clone_to_cstring(cwd)
 	dir_files := load_dir_files(c_cwd, dirs_allocator, strs_allocator)
+	delete(c_cwd)
 
 	font := rl.GetFontDefault()
 
@@ -230,11 +231,11 @@ main :: proc() {
 					if rl.DirectoryExists(c_path) {
 						delete(cwd)
 						cwd = strings.clone(path)
-						delete(c_cwd)
 						c_cwd = strings.clone_to_cstring(cwd)
 						free_all(strs_allocator)
 						free_all(dirs_allocator)
 						dir_files = load_dir_files(c_cwd, dirs_allocator, strs_allocator)
+						delete(c_cwd)
 						base_start = 0
 						for base_start < len(dir_files) {
 							parts := strings.split(dir_files[base_start], "/")
@@ -278,11 +279,11 @@ main :: proc() {
 					new_cwd := strings.join(up_until, "/")
 					delete(cwd)
 					cwd = new_cwd
-					delete(c_cwd)
 					c_cwd = strings.clone_to_cstring(cwd)
 					free_all(strs_allocator)
 					free_all(dirs_allocator)
 					dir_files = load_dir_files(c_cwd, dirs_allocator, strs_allocator)
+					delete(c_cwd)
 					base_start = 0
 					for base_start < len(dir_files) {
 						parts := strings.split(dir_files[base_start], "/")
