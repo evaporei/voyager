@@ -38,13 +38,15 @@ get_homedir :: proc() -> string {
 	}
 }
 
-// Scan all files and directories in a base path
-// WARNING: files.paths[] must be previously allocated and
-// contain enough space to store all required paths
-my_scan_dir_files :: proc(basePath: cstring, files: ^[]string, allocator := context.allocator) {
+scan_dir_files :: proc(
+	basePath: cstring,
+	dirs_allocator := context.allocator,
+	strs_allocator := context.allocator,
+) -> [dynamic]string {
+	files := make([dynamic]string, dirs_allocator)
+
 	dp: ^posix.dirent
 	dir := posix.opendir(basePath)
-	i := 0
 
 	if dir != nil {
 		dp = posix.readdir(dir)
@@ -68,8 +70,7 @@ my_scan_dir_files :: proc(basePath: cstring, files: ^[]string, allocator := cont
 				}
 				strings.write_string(&b, string(d_name))
 
-				files[i] = strings.clone(strings.to_string(b), allocator)
-				i += 1
+				append(&files, strings.clone(strings.to_string(b), strs_allocator))
 			}
 			dp = posix.readdir(dir)
 		}
@@ -77,38 +78,8 @@ my_scan_dir_files :: proc(basePath: cstring, files: ^[]string, allocator := cont
 	} else {
 		fmt.println("FILEIO: Directory cannot be opened", basePath)
 	}
-}
 
-my_load_dir_files :: proc(
-	dirPath: cstring,
-	dirs_allocator := context.allocator,
-	strs_allocator := context.allocator,
-) -> (
-	files: []string,
-) {
-	entity: ^posix.dirent
-	dir := posix.opendir(dirPath)
-	counter := 0
-
-	// It's a directory
-	if dir != nil {
-		entity = posix.readdir(dir)
-		for entity != nil {
-			d_name := cstring(raw_data(&entity.d_name))
-			if string(d_name) != "." && string(d_name) != ".." {
-				counter += 1
-			}
-			entity = posix.readdir(dir)
-		}
-
-		files = make([]string, counter, dirs_allocator)
-		posix.closedir(dir)
-		my_scan_dir_files(dirPath, &files, strs_allocator)
-	} else {
-		fmt.println("FILEIO: Failed to open requested directory") // Maybe it's a file...
-	}
-
-	return
+	return files
 }
 
 load_dir_files :: proc(
@@ -117,15 +88,15 @@ load_dir_files :: proc(
 	strs_allocator := context.allocator,
 ) -> []string {
 	c_dir := strings.clone_to_cstring(dir, context.temp_allocator)
-	dir_files := my_load_dir_files(c_dir, dirs_allocator, strs_allocator)
+	dir_files := scan_dir_files(c_dir, dirs_allocator, strs_allocator)
 	delete(c_dir, context.temp_allocator)
-	slice.sort_by(dir_files, proc(a: string, b: string) -> bool {
+	slice.sort_by(dir_files[:], proc(a: string, b: string) -> bool {
 		xl, yl :=
 			strings.to_lower(a, context.temp_allocator),
 			strings.to_lower(b, context.temp_allocator)
 		return xl < yl
 	})
-	return dir_files
+	return dir_files[:]
 }
 
 open_file :: proc(file: cstring) {
