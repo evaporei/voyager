@@ -257,20 +257,20 @@ main :: proc() {
 	outer: for !rl.WindowShouldClose() {
 		free_all(context.temp_allocator)
 
-		mouse_delta := rl.GetMouseWheelMove() * SCROLL_SPEED * rl.GetFrameTime()
-
 		mouse_pos := rl.GetMousePosition()
 		mouse_clicked := rl.IsMouseButtonPressed(.LEFT)
 
-		rl.BeginDrawing()
-		defer rl.EndDrawing()
-		rl.ClearBackground(rl.BLACK)
+		mouse_delta := rl.GetMouseWheelMove() * SCROLL_SPEED * rl.GetFrameTime()
 
 		if mouse_delta != 0 {
 			dir_offsets_scroll(&offsets, dir^, mouse_delta)
 		}
 
-		for path, i in dir.files[offsets.start:offsets.end] {
+		rl.BeginDrawing()
+		defer rl.EndDrawing()
+		rl.ClearBackground(rl.BLACK)
+
+		for &path, i in dir.files[offsets.start:offsets.end] {
 			c_path := strings.clone_to_cstring(path, context.temp_allocator)
 			defer delete(c_path, context.temp_allocator)
 			c_file := rl.GetFileName(c_path)
@@ -300,7 +300,7 @@ main :: proc() {
 
 		parts := strings.split(dir.cwd, "/")
 		x: f32 = 0
-		for part, i in parts {
+		for &part, i in parts {
 			c_part := strings.clone_to_cstring(part, context.temp_allocator)
 			defer delete(c_part, context.temp_allocator)
 			part_size := rl.MeasureTextEx(font, c_part, FONT_SIZE, FONT_SPACING)
