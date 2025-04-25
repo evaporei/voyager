@@ -291,12 +291,12 @@ main :: proc() {
 		rl.DrawRectangle(0, 0, WINDOW_WIDTH, 20, rl.BLACK)
 
 		parts := strings.split(dir.cwd, "/")
-		x: i32 = 0
+		x: f32 = 0
 		for part, i in parts {
 			c_part := strings.clone_to_cstring(part, context.temp_allocator)
 			defer delete(c_part, context.temp_allocator)
-			part_size := rl.MeasureText(c_part, FONT_SIZE)
-			rect := rl.Rectangle{f32(x), 0, f32(part_size), FONT_SIZE}
+			part_size := rl.MeasureTextEx(font, c_part, FONT_SIZE, FONT_SPACING)
+			rect := rl.Rectangle{f32(x), 0, part_size.x, FONT_SIZE}
 			if rl.CheckCollisionPointRec(mouse_pos, rect) {
 				if mouse_clicked && i != len(parts) - 1 {
 					up_until := parts[:i + 1]
@@ -310,10 +310,10 @@ main :: proc() {
 				color.a = 100
 				rl.DrawRectangleRec(rect, color)
 			}
-			rl.DrawText(c_part, x, 0, FONT_SIZE, rl.WHITE)
-			x += part_size
-			rl.DrawText(" / ", x, 0, FONT_SIZE, rl.WHITE)
-			x += rl.MeasureText(" / ", FONT_SIZE)
+			rl.DrawTextEx(font, c_part, {x, 0}, FONT_SIZE, FONT_SPACING, rl.WHITE)
+			x += part_size.x
+			rl.DrawTextEx(font, " / ", {x, 0}, FONT_SIZE, FONT_SPACING, rl.WHITE)
+			x += rl.MeasureTextEx(font, " / ", FONT_SIZE, FONT_SPACING).x
 		}
 
 		rl.DrawLine(0, FONT_SIZE, WINDOW_WIDTH, FONT_SIZE, rl.SKYBLUE)
