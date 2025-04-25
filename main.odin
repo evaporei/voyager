@@ -146,7 +146,7 @@ main :: proc() {
 	defer rl.CloseWindow()
 
 	dirs_arena: vmem.Arena
-	err := vmem.arena_init_growing(&dirs_arena, 5 * mem.Megabyte)
+	err := vmem.arena_init_growing(&dirs_arena, 1 * mem.Megabyte)
 	assert(err == .None)
 	dirs_allocator := vmem.arena_allocator(&dirs_arena)
 
@@ -163,7 +163,6 @@ main :: proc() {
 	}
 
 	cwd := strings.clone(base_dir)
-	// cwd := strings.clone("/Volumes/nas/slow/music")
 	c_cwd := strings.clone_to_cstring(cwd)
 	dir_files := load_dir_files(c_cwd, dirs_allocator, strs_allocator)
 
