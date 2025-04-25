@@ -33,6 +33,79 @@ get_homedir :: proc() -> string {
 	}
 }
 
+// Scan all files and directories in a base path
+// WARNING: files.paths[] must be previously allocated and
+// contain enough space to store all required paths
+scan_dir_files :: proc(basePath: cstring, files: ^[dynamic]string) {
+	dp: ^posix.dirent
+	dir := posix.opendir(basePath)
+	i := 0
+
+	if dir != nil {
+		dp = posix.readdir(dir)
+		for dp != nil {
+			d_name := cstring(raw_data(&dp.d_name))
+			// NOTE: We skip '.' (current dir) and '..' (parent dir) filepaths
+			if string(d_name) != "." && string(d_name) != ".." {
+				b: strings.Builder
+				strings.builder_init_len_cap(&b, 0, len(d_name))
+
+				strings.write_string(&b, string(basePath))
+				when ODIN_OS == .Windows {
+					strings.write_string(&b, "\\")
+				} else {
+					strings.write_string(&b, "/")
+				}
+				strings.write_string(&b, string(d_name))
+
+				files[i] = strings.clone(strings.to_string(b))
+				i += 1
+			}
+			dp = posix.readdir(dir)
+		}
+
+		posix.closedir(dir)
+	} else {fmt.println("FILEIO: Directory cannot be opened", basePath)}
+}
+
+MAX_FILEPATH_LENGTH :: 4096
+my_load_dir_files :: proc(dirPath: cstring) -> (files: [dynamic]string) {
+	entity: ^posix.dirent
+	dir := posix.opendir(dirPath)
+	counter := 0
+
+	// It's a directory
+	if dir != nil {
+		// SCAN 1: Count files
+		entity = posix.readdir(dir)
+		for entity != nil {
+			d_name := cstring(raw_data(&entity.d_name))
+			// NOTE: We skip '.' (current dir) and '..' (parent dir) filepaths
+			if string(d_name) != "." && string(d_name) != ".." {
+				counter += 1
+			}
+			entity = posix.readdir(dir)
+		}
+
+		// Memory allocation for dirFileCount
+		// files = make([dynamic]string, counter)
+		// for file in &files {
+		// 	file = make(string, MAX_FILEPATH_LENGTH)
+		// }
+
+		posix.closedir(dir)
+
+		// SCAN 2: Read filepaths
+		// NOTE: Directory paths are also registered
+		scan_dir_files(dirPath, &files)
+
+	} else {
+		fmt.println("FILEIO: Failed to open requested directory") // Maybe it's a file...
+	}
+
+	return
+}
+
 load_dir_files :: proc(
 	dir: cstring,
 	dirs_allocator := context.allocator,
