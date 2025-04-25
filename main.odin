@@ -201,6 +201,30 @@ dir_offsets_scroll :: proc(offsets: ^Dir_Offsets, dir: Dir_State, mouse_delta: f
 	end = max(1, min(ELEMENT_SIZE + start, len(dir.files)))
 }
 
+POOL_CAP :: 10
+Dir_State_Pool :: struct {
+	dirs:  [POOL_CAP]Dir_State,
+	count: int,
+}
+
+dir_state_pool_push :: proc(pool: ^Dir_State_Pool, path: string) -> ^Dir_State {
+	for &dir in &pool.dirs {
+		if dir.cwd == path {
+			return &dir
+		}
+	}
+
+	count := pool.count % POOL_CAP
+	assert(dir_state_init(&pool.dirs[count]) == .None)
+	dir_state_load(&pool.dirs[count], path)
+	pool.count = count + 1
+	return &pool.dirs[count]
+}
+
+dir_state_pool_get :: proc(pool: ^Dir_State_Pool) -> ^Dir_State {
+	return &pool.dirs[pool.count]
+}
+
 main :: proc() {
 	rl.SetTraceLogLevel(.WARNING)
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "voyager")
@@ -208,8 +232,7 @@ main :: proc() {
 
 	font := rl.GetFontDefault()
 
-	dir: Dir_State
-	assert(dir_state_init(&dir) == .None)
+	dir_pool: Dir_State_Pool
 
 	init_dir: string
 	if len(os.args) > 1 {
@@ -218,10 +241,10 @@ main :: proc() {
 		init_dir = get_homedir()
 	}
 
-	dir_state_load(&dir, init_dir)
+	dir := dir_state_pool_push(&dir_pool, init_dir)
 
 	offsets: Dir_Offsets
-	dir_offsets_init(&offsets, dir)
+	dir_offsets_init(&offsets, dir^)
 
 	outer: for !rl.WindowShouldClose() {
 		free_all(context.temp_allocator)
@@ -236,7 +259,7 @@ main :: proc() {
 		rl.ClearBackground(rl.BLACK)
 
 		if mouse_delta != 0 {
-			dir_offsets_scroll(&offsets, dir, mouse_delta)
+			dir_offsets_scroll(&offsets, dir^, mouse_delta)
 		}
 
 		for path, i in dir.files[offsets.start:offsets.end] {
@@ -250,8 +273,8 @@ main :: proc() {
 			if rl.CheckCollisionPointRec(mouse_pos, rect) {
 				if mouse_clicked {
 					if rl.DirectoryExists(c_path) {
-						dir_state_load(&dir, path)
-						dir_offsets_init(&offsets, dir)
+						dir = dir_state_pool_push(&dir_pool, path)
+						dir_offsets_init(&offsets, dir^)
 						continue outer
 					} else {
 						open_file(c_path)
@@ -278,9 +301,9 @@ main :: proc() {
 				if mouse_clicked && i != len(parts) - 1 {
 					up_until := parts[:i + 1]
 					new_cwd := strings.join(up_until, "/", context.temp_allocator)
-					dir_state_load(&dir, new_cwd)
+					dir = dir_state_pool_push(&dir_pool, new_cwd)
 					delete(new_cwd, context.temp_allocator)
-					dir_offsets_init(&offsets, dir)
+					dir_offsets_init(&offsets, dir^)
 					break
 				}
 				color := rl.LIME
