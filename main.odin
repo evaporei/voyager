@@ -37,7 +37,9 @@ load_dir_files :: proc(
 		dir_files[i] = strings.clone_from_cstring(path, strs_allocator)
 	}
 	slice.sort_by(dir_files, proc(a: string, b: string) -> bool {
-		xl, yl := strings.to_lower(a), strings.to_lower(b)
+		xl, yl :=
+			strings.to_lower(a, context.temp_allocator),
+			strings.to_lower(b, context.temp_allocator)
 		return xl < yl
 	})
 	return dir_files
@@ -132,8 +134,8 @@ main :: proc() {
 		// fmt.println(start, end)
 
 		for path, i in dir_files[start:end] {
-			c_path := strings.clone_to_cstring(path)
-			defer delete(c_path)
+			c_path := strings.clone_to_cstring(path, context.temp_allocator)
+			defer delete(c_path, context.temp_allocator)
 			c_file := rl.GetFileName(c_path)
 			y := f32(i) * FONT_SIZE + FONT_SIZE
 
@@ -182,8 +184,8 @@ main :: proc() {
 		parts := strings.split(cwd, "/")
 		x: i32 = 0
 		for part, i in parts {
-			c_part := strings.clone_to_cstring(part)
-			defer delete(c_part)
+			c_part := strings.clone_to_cstring(part, context.temp_allocator)
+			defer delete(c_part, context.temp_allocator)
 			part_size := rl.MeasureText(c_part, FONT_SIZE)
 			rect := rl.Rectangle{f32(x), 0, f32(part_size), FONT_SIZE}
 			if rl.CheckCollisionPointRec(mouse_pos, rect) {
@@ -225,6 +227,8 @@ main :: proc() {
 		}
 
 		rl.DrawLine(0, FONT_SIZE, WINDOW_WIDTH, FONT_SIZE, rl.SKYBLUE)
+
+		free_all(context.temp_allocator)
 	}
 	// fmt.println(dirs_arena.total_used)
 	// fmt.println(strs_arena.total_used)
