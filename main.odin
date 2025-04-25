@@ -64,12 +64,12 @@ main :: proc() {
 	defer rl.CloseWindow()
 
 	dirs_arena: vmem.Arena
-	err := vmem.arena_init_growing(&dirs_arena, 100 * mem.Megabyte)
+	err := vmem.arena_init_growing(&dirs_arena, 5 * mem.Megabyte)
 	assert(err == .None)
 	dirs_allocator := vmem.arena_allocator(&dirs_arena)
 
 	strs_arena: vmem.Arena
-	err = vmem.arena_init_growing(&strs_arena, 100 * mem.Megabyte)
+	err = vmem.arena_init_growing(&strs_arena, 5 * mem.Megabyte)
 	assert(err == .None)
 	strs_allocator := vmem.arena_allocator(&strs_arena)
 
@@ -226,4 +226,6 @@ main :: proc() {
 
 		rl.DrawLine(0, FONT_SIZE, WINDOW_WIDTH, FONT_SIZE, rl.SKYBLUE)
 	}
+	// fmt.println(dirs_arena.total_used)
+	// fmt.println(strs_arena.total_used)
 }
