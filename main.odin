@@ -164,12 +164,15 @@ dir_state_init :: proc(dir: ^Dir_State) -> mem.Allocator_Error {
 }
 
 dir_state_load :: proc(dir: ^Dir_State, path: string) {
-	delete(dir.cwd)
+	dir_state_unload(dir)
 	dir.cwd = strings.clone(path)
+	dir.files = load_dir_files(dir.cwd, dir.dirs_allocator, dir.strs_allocator)
+}
 
+dir_state_unload :: proc(dir: ^Dir_State) {
+	delete(dir.cwd)
 	free_all(dir.strs_allocator)
 	free_all(dir.dirs_allocator)
-	dir.files = load_dir_files(dir.cwd, dir.dirs_allocator, dir.strs_allocator)
 }
 
 Dir_Offsets :: struct {
@@ -211,6 +214,10 @@ Dir_State_Pool :: struct {
 	count: int,
 }
 
+dir_state_pool_init :: proc(pool: ^Dir_State_Pool) {
+	for &dir in &pool.dirs do assert(dir_state_init(&dir) == .None)
+}
+
 dir_state_pool_push :: proc(pool: ^Dir_State_Pool, path: string) -> ^Dir_State {
 	for &dir in &pool.dirs {
 		if dir.cwd == path {
@@ -219,7 +226,6 @@ dir_state_pool_push :: proc(pool: ^Dir_State_Pool, path: string) -> ^Dir_State {
 	}
 
 	count := pool.count % POOL_CAP
-	assert(dir_state_init(&pool.dirs[count]) == .None)
 	dir_state_load(&pool.dirs[count], path)
 	pool.count = count + 1
 	return &pool.dirs[count]
@@ -241,6 +247,7 @@ main :: proc() {
 	// rl.SetTextureFilter(font.texture, .TRILINEAR)
 
 	dir_pool: Dir_State_Pool
+	dir_state_pool_init(&dir_pool)
 
 	init_dir: string
 	if len(os.args) > 1 {
