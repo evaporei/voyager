@@ -168,6 +168,53 @@ dir_state_load :: proc(dir: ^Dir_State, path: string) {
 	dir.files = load_dir_files(dir.cwd, dir.dirs_allocator, dir.strs_allocator)
 }
 
+Dir_Offsets :: struct {
+	base_start, start, end:  int,
+	base_y_offset, y_offset: f32,
+	bigger_than_screen:      bool,
+}
+
+dir_offsets_init :: proc(offsets: ^Dir_Offsets, dir: Dir_State) {
+	using offsets
+	base_start = 0
+	for base_start < len(dir.files) {
+		parts := strings.split(dir.files[base_start], "/")
+		if strings.starts_with(parts[len(parts) - 1], ".") {
+			base_start += 1
+		} else {
+			break
+		}
+	}
+	start = base_start
+	end = min(ELEMENT_SIZE + start, len(dir.files))
+	// fmt.println(len(dir.files), base_start, start, end)
+	bigger_than_screen = len(dir.files) - base_start >= ELEMENT_SIZE
+	base_y_offset = f32(start - 0) * -ELEMENT_SIZE / 2
+	y_offset = base_y_offset
+}
+
+dir_offsets_update :: proc(offsets: ^Dir_Offsets, dir: Dir_State, mouse_delta: f32) {
+	using offsets
+	if !bigger_than_screen do return
+	// if offset != 0 {
+	// fmt.println(
+	// 	"wheelMove() =",
+	// 	rl.GetMouseWheelMove(),
+	// 	" offset =",
+	// 	offset,
+	// 	" y_offset =",
+	// 	y_offset,
+	// )
+	// y_offset = max(min(0, y_offset + offset), -WINDOW_HEIGHT * 1.5)
+	y_offset = max(
+		min(y_offset + mouse_delta, base_y_offset), // y_offset + offset,
+		-f32(len(dir.files)) * FONT_SIZE,
+	)
+	// maybe use base_y_offset here instead of int(-y_offset) / FONT_SIZE
+	start = max(base_start, min(int(-y_offset) / FONT_SIZE, len(dir.files) - 1))
+	end = max(1, min(ELEMENT_SIZE + start, len(dir.files)))
+}
+
 main :: proc() {
 	rl.SetTraceLogLevel(.WARNING)
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "voyager")
@@ -187,24 +234,11 @@ main :: proc() {
 
 	dir_state_load(&dir, init_dir)
 
-	base_start := 0
-	for base_start < len(dir.files) {
-		parts := strings.split(dir.files[base_start], "/")
-		if strings.starts_with(parts[len(parts) - 1], ".") {
-			base_start += 1
-		} else {
-			break
-		}
-	}
-	start := base_start
-	end := min(ELEMENT_SIZE + start, len(dir.files))
-	// fmt.println(len(dir.files), base_start, start, end)
-	bigger_than_screen := len(dir.files) - base_start >= ELEMENT_SIZE
-	base_y_offset: f32 = f32(start - 0) * -ELEMENT_SIZE / 2
-	y_offset: f32 = base_y_offset
+	offsets: Dir_Offsets
+	dir_offsets_init(&offsets, dir)
 
 	outer: for !rl.WindowShouldClose() {
-		offset := rl.GetMouseWheelMove() * SCROLL_SPEED * rl.GetFrameTime()
+		mouse_delta := rl.GetMouseWheelMove() * SCROLL_SPEED * rl.GetFrameTime()
 
 		mouse_pos := rl.GetMousePosition()
 		mouse_clicked := rl.IsMouseButtonPressed(.LEFT)
@@ -213,30 +247,12 @@ main :: proc() {
 		defer rl.EndDrawing()
 		rl.ClearBackground(rl.BLACK)
 
-		// fmt.println(len(dir.files) - base_start, WINDOW_HEIGHT / FONT_SIZE)
-		if offset != 0 && bigger_than_screen {
-			// if offset != 0 {
-			// fmt.println(
-			// 	"wheelMove() =",
-			// 	rl.GetMouseWheelMove(),
-			// 	" offset =",
-			// 	offset,
-			// 	" y_offset =",
-			// 	y_offset,
-			// )
-			// y_offset = max(min(0, y_offset + offset), -WINDOW_HEIGHT * 1.5)
-			y_offset = max(
-				min(y_offset + offset, base_y_offset), // y_offset + offset,
-				-f32(len(dir.files)) * FONT_SIZE,
-			)
-			// maybe use base_y_offset here instead of int(-y_offset) / FONT_SIZE
-			start = max(base_start, min(int(-y_offset) / FONT_SIZE, len(dir.files) - 1))
-			end = max(1, min(ELEMENT_SIZE + start, len(dir.files)))
-			// fmt.println(start, end)
+		if mouse_delta != 0 {
+			dir_offsets_update(&offsets, dir, mouse_delta)
 		}
-		// fmt.println(start, end)
+		// fmt.println(offsets.start, offsets.end)
 
-		for path, i in dir.files[start:end] {
+		for path, i in dir.files[offsets.start:offsets.end] {
 			c_path := strings.clone_to_cstring(path, context.temp_allocator)
 			defer delete(c_path, context.temp_allocator)
 			c_file := rl.GetFileName(c_path)
@@ -248,20 +264,7 @@ main :: proc() {
 				if mouse_clicked {
 					if rl.DirectoryExists(c_path) {
 						dir_state_load(&dir, path)
-						base_start = 0
-						for base_start < len(dir.files) {
-							parts := strings.split(dir.files[base_start], "/")
-							if strings.starts_with(parts[len(parts) - 1], ".") {
-								base_start += 1
-							} else {
-								break
-							}
-						}
-						start = base_start
-						end = min(ELEMENT_SIZE + start, len(dir.files))
-						bigger_than_screen = len(dir.files) - base_start > ELEMENT_SIZE
-						base_y_offset = f32(start - 0) * -ELEMENT_SIZE
-						y_offset = base_y_offset
+						dir_offsets_init(&offsets, dir)
 						// fmt.println(len(dir.files), start, end)
 						continue outer
 					} else {
@@ -291,20 +294,7 @@ main :: proc() {
 					new_cwd := strings.join(up_until, "/", context.temp_allocator)
 					dir_state_load(&dir, new_cwd)
 					delete(new_cwd, context.temp_allocator)
-					base_start = 0
-					for base_start < len(dir.files) {
-						parts := strings.split(dir.files[base_start], "/")
-						if strings.starts_with(parts[len(parts) - 1], ".") {
-							base_start += 1
-						} else {
-							break
-						}
-					}
-					start = base_start
-					end = min(ELEMENT_SIZE + start, len(dir.files))
-					bigger_than_screen = len(dir.files) - base_start > ELEMENT_SIZE
-					base_y_offset = f32(start - 0) * -ELEMENT_SIZE
-					y_offset = base_y_offset
+					dir_offsets_init(&offsets, dir)
 					// fmt.println(len(dir.files), start, end)
 					break
 				}
