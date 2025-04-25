@@ -142,20 +142,25 @@ open_file :: proc(file: cstring) {
 	}
 }
 
+Dir_State :: struct {
+	dirs_arena:     vmem.Arena,
+	dirs_allocator: mem.Allocator,
+	strs_arena:     vmem.Arena,
+	strs_allocator: mem.Allocator,
+}
+
 main :: proc() {
 	rl.SetTraceLogLevel(.WARNING)
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "voyager")
 	defer rl.CloseWindow()
 
-	dirs_arena: vmem.Arena
-	err := vmem.arena_init_growing(&dirs_arena, 1 * mem.Megabyte)
+	dir: Dir_State
+	err := vmem.arena_init_growing(&dir.dirs_arena, 1 * mem.Megabyte)
 	assert(err == .None)
-	dirs_allocator := vmem.arena_allocator(&dirs_arena)
-
-	strs_arena: vmem.Arena
-	err = vmem.arena_init_growing(&strs_arena, 5 * mem.Megabyte)
+	dir.dirs_allocator = vmem.arena_allocator(&dir.dirs_arena)
+	err = vmem.arena_init_growing(&dir.strs_arena, 5 * mem.Megabyte)
 	assert(err == .None)
-	strs_allocator := vmem.arena_allocator(&strs_arena)
+	dir.strs_allocator = vmem.arena_allocator(&dir.strs_arena)
 
 	base_dir: string
 	if len(os.args) > 1 {
@@ -165,7 +170,7 @@ main :: proc() {
 	}
 
 	cwd := strings.clone(base_dir)
-	dir_files := load_dir_files(cwd, dirs_allocator, strs_allocator)
+	dir_files := load_dir_files(cwd, dir.dirs_allocator, dir.strs_allocator)
 
 	font := rl.GetFontDefault()
 
@@ -231,9 +236,9 @@ main :: proc() {
 					if rl.DirectoryExists(c_path) {
 						delete(cwd)
 						cwd = strings.clone(path)
-						free_all(strs_allocator)
-						free_all(dirs_allocator)
-						dir_files = load_dir_files(cwd, dirs_allocator, strs_allocator)
+						free_all(dir.strs_allocator)
+						free_all(dir.dirs_allocator)
+						dir_files = load_dir_files(cwd, dir.dirs_allocator, dir.strs_allocator)
 						base_start = 0
 						for base_start < len(dir_files) {
 							parts := strings.split(dir_files[base_start], "/")
@@ -277,9 +282,9 @@ main :: proc() {
 					new_cwd := strings.join(up_until, "/")
 					delete(cwd)
 					cwd = new_cwd
-					free_all(strs_allocator)
-					free_all(dirs_allocator)
-					dir_files = load_dir_files(cwd, dirs_allocator, strs_allocator)
+					free_all(dir.strs_allocator)
+					free_all(dir.dirs_allocator)
+					dir_files = load_dir_files(cwd, dir.dirs_allocator, dir.strs_allocator)
 					base_start = 0
 					for base_start < len(dir_files) {
 						parts := strings.split(dir_files[base_start], "/")
