@@ -83,7 +83,14 @@ main :: proc() {
 	assert(err == .None)
 	strs_allocator := vmem.arena_allocator(&strs_arena)
 
-	cwd := strings.clone(get_homedir())
+	base_dir: string
+	if len(os.args) > 1 {
+		base_dir = os.args[1]
+	} else {
+		base_dir = get_homedir()
+	}
+
+	cwd := strings.clone(base_dir)
 	// cwd := strings.clone("/Volumes/nas/slow/music")
 	c_cwd := strings.clone_to_cstring(cwd)
 	dir_files := load_dir_files(c_cwd, dirs_allocator, strs_allocator)
