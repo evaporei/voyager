@@ -147,6 +147,8 @@ Dir_State :: struct {
 	dirs_allocator: mem.Allocator,
 	strs_arena:     vmem.Arena,
 	strs_allocator: mem.Allocator,
+	cwd:            string,
+	files:          []string,
 }
 
 dir_state_init :: proc(dir: ^Dir_State) -> mem.Allocator_Error {
@@ -157,29 +159,37 @@ dir_state_init :: proc(dir: ^Dir_State) -> mem.Allocator_Error {
 	return .None
 }
 
+dir_state_load :: proc(dir: ^Dir_State, path: string) {
+	delete(dir.cwd)
+	dir.cwd = strings.clone(path)
+
+	free_all(dir.strs_allocator)
+	free_all(dir.dirs_allocator)
+	dir.files = load_dir_files(dir.cwd, dir.dirs_allocator, dir.strs_allocator)
+}
+
 main :: proc() {
 	rl.SetTraceLogLevel(.WARNING)
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "voyager")
 	defer rl.CloseWindow()
 
+	font := rl.GetFontDefault()
+
 	dir: Dir_State
 	assert(dir_state_init(&dir) == .None)
 
-	base_dir: string
+	init_dir: string
 	if len(os.args) > 1 {
-		base_dir = os.args[1]
+		init_dir = os.args[1]
 	} else {
-		base_dir = get_homedir()
+		init_dir = get_homedir()
 	}
 
-	cwd := strings.clone(base_dir)
-	dir_files := load_dir_files(cwd, dir.dirs_allocator, dir.strs_allocator)
-
-	font := rl.GetFontDefault()
+	dir_state_load(&dir, init_dir)
 
 	base_start := 0
-	for base_start < len(dir_files) {
-		parts := strings.split(dir_files[base_start], "/")
+	for base_start < len(dir.files) {
+		parts := strings.split(dir.files[base_start], "/")
 		if strings.starts_with(parts[len(parts) - 1], ".") {
 			base_start += 1
 		} else {
@@ -187,9 +197,9 @@ main :: proc() {
 		}
 	}
 	start := base_start
-	end := min(ELEMENT_SIZE + start, len(dir_files))
-	// fmt.println(len(dir_files), base_start, start, end)
-	bigger_than_screen := len(dir_files) - base_start >= ELEMENT_SIZE
+	end := min(ELEMENT_SIZE + start, len(dir.files))
+	// fmt.println(len(dir.files), base_start, start, end)
+	bigger_than_screen := len(dir.files) - base_start >= ELEMENT_SIZE
 	base_y_offset: f32 = f32(start - 0) * -ELEMENT_SIZE / 2
 	y_offset: f32 = base_y_offset
 
@@ -203,7 +213,7 @@ main :: proc() {
 		defer rl.EndDrawing()
 		rl.ClearBackground(rl.BLACK)
 
-		// fmt.println(len(dir_files) - base_start, WINDOW_HEIGHT / FONT_SIZE)
+		// fmt.println(len(dir.files) - base_start, WINDOW_HEIGHT / FONT_SIZE)
 		if offset != 0 && bigger_than_screen {
 			// if offset != 0 {
 			// fmt.println(
@@ -217,16 +227,16 @@ main :: proc() {
 			// y_offset = max(min(0, y_offset + offset), -WINDOW_HEIGHT * 1.5)
 			y_offset = max(
 				min(y_offset + offset, base_y_offset), // y_offset + offset,
-				-f32(len(dir_files)) * FONT_SIZE,
+				-f32(len(dir.files)) * FONT_SIZE,
 			)
 			// maybe use base_y_offset here instead of int(-y_offset) / FONT_SIZE
-			start = max(base_start, min(int(-y_offset) / FONT_SIZE, len(dir_files) - 1))
-			end = max(1, min(ELEMENT_SIZE + start, len(dir_files)))
+			start = max(base_start, min(int(-y_offset) / FONT_SIZE, len(dir.files) - 1))
+			end = max(1, min(ELEMENT_SIZE + start, len(dir.files)))
 			// fmt.println(start, end)
 		}
 		// fmt.println(start, end)
 
-		for path, i in dir_files[start:end] {
+		for path, i in dir.files[start:end] {
 			c_path := strings.clone_to_cstring(path, context.temp_allocator)
 			defer delete(c_path, context.temp_allocator)
 			c_file := rl.GetFileName(c_path)
@@ -237,14 +247,10 @@ main :: proc() {
 			if rl.CheckCollisionPointRec(mouse_pos, rect) {
 				if mouse_clicked {
 					if rl.DirectoryExists(c_path) {
-						delete(cwd)
-						cwd = strings.clone(path)
-						free_all(dir.strs_allocator)
-						free_all(dir.dirs_allocator)
-						dir_files = load_dir_files(cwd, dir.dirs_allocator, dir.strs_allocator)
+						dir_state_load(&dir, path)
 						base_start = 0
-						for base_start < len(dir_files) {
-							parts := strings.split(dir_files[base_start], "/")
+						for base_start < len(dir.files) {
+							parts := strings.split(dir.files[base_start], "/")
 							if strings.starts_with(parts[len(parts) - 1], ".") {
 								base_start += 1
 							} else {
@@ -252,11 +258,11 @@ main :: proc() {
 							}
 						}
 						start = base_start
-						end = min(ELEMENT_SIZE + start, len(dir_files))
-						bigger_than_screen = len(dir_files) - base_start > ELEMENT_SIZE
+						end = min(ELEMENT_SIZE + start, len(dir.files))
+						bigger_than_screen = len(dir.files) - base_start > ELEMENT_SIZE
 						base_y_offset = f32(start - 0) * -ELEMENT_SIZE
 						y_offset = base_y_offset
-						// fmt.println(len(dir_files), start, end)
+						// fmt.println(len(dir.files), start, end)
 						continue outer
 					} else {
 						open_file(c_path)
@@ -272,7 +278,7 @@ main :: proc() {
 
 		rl.DrawRectangle(0, 0, WINDOW_WIDTH, 20, rl.BLACK)
 
-		parts := strings.split(cwd, "/")
+		parts := strings.split(dir.cwd, "/")
 		x: i32 = 0
 		for part, i in parts {
 			c_part := strings.clone_to_cstring(part, context.temp_allocator)
@@ -282,15 +288,12 @@ main :: proc() {
 			if rl.CheckCollisionPointRec(mouse_pos, rect) {
 				if mouse_clicked && i != len(parts) - 1 {
 					up_until := parts[:i + 1]
-					new_cwd := strings.join(up_until, "/")
-					delete(cwd)
-					cwd = new_cwd
-					free_all(dir.strs_allocator)
-					free_all(dir.dirs_allocator)
-					dir_files = load_dir_files(cwd, dir.dirs_allocator, dir.strs_allocator)
+					new_cwd := strings.join(up_until, "/", context.temp_allocator)
+					dir_state_load(&dir, new_cwd)
+					delete(new_cwd, context.temp_allocator)
 					base_start = 0
-					for base_start < len(dir_files) {
-						parts := strings.split(dir_files[base_start], "/")
+					for base_start < len(dir.files) {
+						parts := strings.split(dir.files[base_start], "/")
 						if strings.starts_with(parts[len(parts) - 1], ".") {
 							base_start += 1
 						} else {
@@ -298,11 +301,11 @@ main :: proc() {
 						}
 					}
 					start = base_start
-					end = min(ELEMENT_SIZE + start, len(dir_files))
-					bigger_than_screen = len(dir_files) - base_start > ELEMENT_SIZE
+					end = min(ELEMENT_SIZE + start, len(dir.files))
+					bigger_than_screen = len(dir.files) - base_start > ELEMENT_SIZE
 					base_y_offset = f32(start - 0) * -ELEMENT_SIZE
 					y_offset = base_y_offset
-					// fmt.println(len(dir_files), start, end)
+					// fmt.println(len(dir.files), start, end)
 					break
 				}
 				color := rl.LIME
