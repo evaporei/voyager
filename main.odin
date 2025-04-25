@@ -14,9 +14,11 @@ import rl "vendor:raylib"
 when ODIN_OS == .Darwin {
 	WINDOW_WIDTH, WINDOW_HEIGHT :: 1280, 720
 	FONT_SIZE :: 20
+	SCROLL_SPEED: f32 : 2000
 } else when ODIN_OS == .Linux {
 	WINDOW_WIDTH, WINDOW_HEIGHT :: 1920, 1080
 	FONT_SIZE :: 50
+	SCROLL_SPEED: f32 : 20000
 }
 FONT_SPACING :: FONT_SIZE / 10
 ELEMENT_SIZE :: WINDOW_HEIGHT / FONT_SIZE
@@ -98,8 +100,6 @@ main :: proc() {
 
 	font := rl.GetFontDefault()
 
-	scroll_speed: f32 = 2000
-
 	base_start := 0
 	for base_start < len(dir_files) {
 		parts := strings.split(dir_files[base_start], "/")
@@ -117,7 +117,7 @@ main :: proc() {
 	y_offset: f32 = base_y_offset
 
 	outer: for !rl.WindowShouldClose() {
-		offset := rl.GetMouseWheelMove() * scroll_speed * rl.GetFrameTime()
+		offset := rl.GetMouseWheelMove() * SCROLL_SPEED * rl.GetFrameTime()
 
 		mouse_pos := rl.GetMousePosition()
 		mouse_clicked := rl.IsMouseButtonPressed(.LEFT)
