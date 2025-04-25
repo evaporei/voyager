@@ -149,18 +149,21 @@ Dir_State :: struct {
 	strs_allocator: mem.Allocator,
 }
 
+dir_state_init :: proc(dir: ^Dir_State) -> mem.Allocator_Error {
+	vmem.arena_init_growing(&dir.dirs_arena, 1 * mem.Megabyte) or_return
+	dir.dirs_allocator = vmem.arena_allocator(&dir.dirs_arena)
+	vmem.arena_init_growing(&dir.strs_arena, 5 * mem.Megabyte) or_return
+	dir.strs_allocator = vmem.arena_allocator(&dir.strs_arena)
+	return .None
+}
+
 main :: proc() {
 	rl.SetTraceLogLevel(.WARNING)
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "voyager")
 	defer rl.CloseWindow()
 
 	dir: Dir_State
-	err := vmem.arena_init_growing(&dir.dirs_arena, 1 * mem.Megabyte)
-	assert(err == .None)
-	dir.dirs_allocator = vmem.arena_allocator(&dir.dirs_arena)
-	err = vmem.arena_init_growing(&dir.strs_arena, 5 * mem.Megabyte)
-	assert(err == .None)
-	dir.strs_allocator = vmem.arena_allocator(&dir.strs_arena)
+	assert(dir_state_init(&dir) == .None)
 
 	base_dir: string
 	if len(os.args) > 1 {
