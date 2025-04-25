@@ -231,16 +231,11 @@ dir_state_pool_push :: proc(pool: ^Dir_State_Pool, path: string) -> ^Dir_State {
 	return &pool.dirs[count]
 }
 
-dir_state_pool_reload :: proc(pool: ^Dir_State_Pool, path: string) -> ^Dir_State {
-	for &dir in &pool.dirs {
-		if dir.cwd == path {
-			dir_cwd_copy := strings.clone(dir.cwd, context.temp_allocator)
-			dir_state_load(&dir, dir_cwd_copy)
-			delete(dir_cwd_copy, context.temp_allocator)
-			return &dir
-		}
-	}
-	unreachable()
+dir_state_pool_reload :: proc(pool: ^Dir_State_Pool, dir: ^Dir_State) -> ^Dir_State {
+	dir_cwd_copy := strings.clone(dir.cwd, context.temp_allocator)
+	dir_state_load(dir, dir_cwd_copy)
+	delete(dir_cwd_copy, context.temp_allocator)
+	return dir
 }
 
 main :: proc() {
@@ -286,7 +281,7 @@ main :: proc() {
 		}
 
 		if rl.IsKeyPressed(.F5) {
-			dir = dir_state_pool_reload(&dir_pool, dir.cwd)
+			dir = dir_state_pool_reload(&dir_pool, dir)
 			dir_offsets_init(&offsets, dir^)
 		}
 
