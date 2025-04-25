@@ -224,6 +224,8 @@ main :: proc() {
 	dir_offsets_init(&offsets, dir)
 
 	outer: for !rl.WindowShouldClose() {
+		free_all(context.temp_allocator)
+
 		mouse_delta := rl.GetMouseWheelMove() * SCROLL_SPEED * rl.GetFrameTime()
 
 		mouse_pos := rl.GetMousePosition()
@@ -292,7 +294,5 @@ main :: proc() {
 		}
 
 		rl.DrawLine(0, FONT_SIZE, WINDOW_WIDTH, FONT_SIZE, rl.SKYBLUE)
-
-		free_all(context.temp_allocator)
 	}
 }
