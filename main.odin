@@ -51,7 +51,12 @@ my_scan_dir_files :: proc(
 			d_name := cstring(raw_data(&dp.d_name))
 			if string(d_name) != "." && string(d_name) != ".." {
 				b: strings.Builder
-				strings.builder_init_len_cap(&b, 0, len(d_name), context.temp_allocator)
+				strings.builder_init_len_cap(
+					&b,
+					0,
+					len(d_name) + 1 + len(basePath),
+					context.temp_allocator,
+				)
 				defer strings.builder_destroy(&b)
 
 				strings.write_string(&b, string(basePath))
@@ -73,7 +78,6 @@ my_scan_dir_files :: proc(
 	}
 }
 
-MAX_FILEPATH_LENGTH :: 4096
 my_load_dir_files :: proc(
 	dirPath: cstring,
 	dirs_allocator := context.allocator,
