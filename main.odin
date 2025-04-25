@@ -36,7 +36,11 @@ get_homedir :: proc() -> string {
 // Scan all files and directories in a base path
 // WARNING: files.paths[] must be previously allocated and
 // contain enough space to store all required paths
-scan_dir_files :: proc(basePath: cstring, files: ^[dynamic]string) {
+my_scan_dir_files :: proc(
+	basePath: cstring,
+	files: ^[dynamic]string,
+	allocator := context.allocator,
+) {
 	dp: ^posix.dirent
 	dir := posix.opendir(basePath)
 	i := 0
@@ -48,7 +52,8 @@ scan_dir_files :: proc(basePath: cstring, files: ^[dynamic]string) {
 			// NOTE: We skip '.' (current dir) and '..' (parent dir) filepaths
 			if string(d_name) != "." && string(d_name) != ".." {
 				b: strings.Builder
-				strings.builder_init_len_cap(&b, 0, len(d_name))
+				strings.builder_init_len_cap(&b, 0, len(d_name), context.temp_allocator)
+				defer strings.builder_destroy(&b)
 
 				strings.write_string(&b, string(basePath))
 				when ODIN_OS == .Windows {
@@ -58,7 +63,7 @@ scan_dir_files :: proc(basePath: cstring, files: ^[dynamic]string) {
 				}
 				strings.write_string(&b, string(d_name))
 
-				files[i] = strings.clone(strings.to_string(b))
+				files[i] = strings.clone(strings.to_string(b), allocator)
 				i += 1
 			}
 			dp = posix.readdir(dir)
@@ -69,7 +74,13 @@ scan_dir_files :: proc(basePath: cstring, files: ^[dynamic]string) {
 }
 
 MAX_FILEPATH_LENGTH :: 4096
-my_load_dir_files :: proc(dirPath: cstring) -> (files: [dynamic]string) {
+my_load_dir_files :: proc(
+	dirPath: cstring,
+	dirs_allocator := context.allocator,
+	strs_allocator := context.allocator,
+) -> (
+	files: [dynamic]string,
+) {
 	entity: ^posix.dirent
 	dir := posix.opendir(dirPath)
 	counter := 0
@@ -88,7 +99,7 @@ my_load_dir_files :: proc(dirPath: cstring) -> (files: [dynamic]string) {
 		}
 
 		// Memory allocation for dirFileCount
-		// files = make([dynamic]string, counter)
+		files = make([dynamic]string, counter, dirs_allocator)
 		// for file in &files {
 		// 	file = make(string, MAX_FILEPATH_LENGTH)
 		// }
@@ -97,7 +108,7 @@ my_load_dir_files :: proc(dirPath: cstring) -> (files: [dynamic]string) {
 
 		// SCAN 2: Read filepaths
 		// NOTE: Directory paths are also registered
-		scan_dir_files(dirPath, &files)
+		my_scan_dir_files(dirPath, &files, strs_allocator)
 
 	} else {
 		fmt.println("FILEIO: Failed to open requested directory") // Maybe it's a file...
@@ -111,20 +122,14 @@ load_dir_files :: proc(
 	dirs_allocator := context.allocator,
 	strs_allocator := context.allocator,
 ) -> []string {
-	c_dir_files := rl.LoadDirectoryFiles(dir)
-	defer rl.UnloadDirectoryFiles(c_dir_files)
-	dir_files := make([]string, c_dir_files.count, dirs_allocator)
-	for i in 0 ..< c_dir_files.count {
-		path := c_dir_files.paths[i]
-		dir_files[i] = strings.clone_from_cstring(path, strs_allocator)
-	}
-	slice.sort_by(dir_files, proc(a: string, b: string) -> bool {
+	dir_files := my_load_dir_files(dir, dirs_allocator, strs_allocator)
+	slice.sort_by(dir_files[:], proc(a: string, b: string) -> bool {
 		xl, yl :=
 			strings.to_lower(a, context.temp_allocator),
 			strings.to_lower(b, context.temp_allocator)
 		return xl < yl
 	})
-	return dir_files
+	return dir_files[:]
 }
 
 open_file :: proc(file: cstring) {
