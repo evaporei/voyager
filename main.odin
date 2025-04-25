@@ -221,10 +221,6 @@ dir_state_pool_push :: proc(pool: ^Dir_State_Pool, path: string) -> ^Dir_State {
 	return &pool.dirs[count]
 }
 
-dir_state_pool_get :: proc(pool: ^Dir_State_Pool) -> ^Dir_State {
-	return &pool.dirs[pool.count]
-}
-
 main :: proc() {
 	rl.SetTraceLogLevel(.WARNING)
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "voyager")
