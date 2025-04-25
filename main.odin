@@ -11,7 +11,11 @@ import "core:sys/posix"
 
 import rl "vendor:raylib"
 
-WINDOW_WIDTH, WINDOW_HEIGHT :: 1280, 720
+when ODIN_OS == .Darwin {
+	WINDOW_WIDTH, WINDOW_HEIGHT :: 1280, 720
+} else when ODIN_OS == .Linux {
+	WINDOW_WIDTH, WINDOW_HEIGHT :: 1920, 1080
+}
 FONT_SIZE :: 20
 FONT_SPACING :: FONT_SIZE / 10
 ELEMENT_SIZE :: WINDOW_HEIGHT / FONT_SIZE
