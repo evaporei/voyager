@@ -49,7 +49,6 @@ my_scan_dir_files :: proc(
 		dp = posix.readdir(dir)
 		for dp != nil {
 			d_name := cstring(raw_data(&dp.d_name))
-			// NOTE: We skip '.' (current dir) and '..' (parent dir) filepaths
 			if string(d_name) != "." && string(d_name) != ".." {
 				b: strings.Builder
 				strings.builder_init_len_cap(&b, 0, len(d_name), context.temp_allocator)
@@ -68,9 +67,10 @@ my_scan_dir_files :: proc(
 			}
 			dp = posix.readdir(dir)
 		}
-
 		posix.closedir(dir)
-	} else {fmt.println("FILEIO: Directory cannot be opened", basePath)}
+	} else {
+		fmt.println("FILEIO: Directory cannot be opened", basePath)
+	}
 }
 
 MAX_FILEPATH_LENGTH :: 4096
@@ -87,29 +87,18 @@ my_load_dir_files :: proc(
 
 	// It's a directory
 	if dir != nil {
-		// SCAN 1: Count files
 		entity = posix.readdir(dir)
 		for entity != nil {
 			d_name := cstring(raw_data(&entity.d_name))
-			// NOTE: We skip '.' (current dir) and '..' (parent dir) filepaths
 			if string(d_name) != "." && string(d_name) != ".." {
 				counter += 1
 			}
 			entity = posix.readdir(dir)
 		}
 
-		// Memory allocation for dirFileCount
 		files = make([dynamic]string, counter, dirs_allocator)
-		// for file in &files {
-		// 	file = make(string, MAX_FILEPATH_LENGTH)
-		// }
-
 		posix.closedir(dir)
-
-		// SCAN 2: Read filepaths
-		// NOTE: Directory paths are also registered
 		my_scan_dir_files(dirPath, &files, strs_allocator)
-
 	} else {
 		fmt.println("FILEIO: Failed to open requested directory") // Maybe it's a file...
 	}
