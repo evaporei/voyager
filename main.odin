@@ -192,7 +192,7 @@ dir_offsets_init :: proc(offsets: ^Dir_Offsets, dir: Dir_State) {
 	y_offset = base_y_offset
 }
 
-dir_offsets_update :: proc(offsets: ^Dir_Offsets, dir: Dir_State, mouse_delta: f32) {
+dir_offsets_scroll :: proc(offsets: ^Dir_Offsets, dir: Dir_State, mouse_delta: f32) {
 	using offsets
 	if !bigger_than_screen do return
 	y_offset = max(min(y_offset + mouse_delta, base_y_offset), -f32(len(dir.files)) * FONT_SIZE)
@@ -236,7 +236,7 @@ main :: proc() {
 		rl.ClearBackground(rl.BLACK)
 
 		if mouse_delta != 0 {
-			dir_offsets_update(&offsets, dir, mouse_delta)
+			dir_offsets_scroll(&offsets, dir, mouse_delta)
 		}
 
 		for path, i in dir.files[offsets.start:offsets.end] {
