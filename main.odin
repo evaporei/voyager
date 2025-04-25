@@ -45,7 +45,6 @@ load_dir_files :: proc(
 	return dir_files
 }
 
-// for now just macos
 open_file :: proc(file: cstring) {
 	pid := posix.fork()
 	if pid < 0 {
@@ -53,8 +52,13 @@ open_file :: proc(file: cstring) {
 		os.exit(1)
 	} else if pid == 0 {
 		// fmt.println("child")
-		args := []cstring{"open", file, nil}
-		os.exit(int(posix.execv("/usr/bin/open", raw_data(args))))
+		when ODIN_OS == .Darwin {
+			args := []cstring{"open", file, nil}
+			os.exit(int(posix.execv("/usr/bin/open", raw_data(args))))
+		} else when ODIN_OS == .Linux {
+			args := []cstring{"xdg-open", file, nil}
+			os.exit(int(posix.execv("/usr/bin/xdg-open", raw_data(args))))
+		}
 	} else {
 		// fmt.println("woo parent!")
 	}
