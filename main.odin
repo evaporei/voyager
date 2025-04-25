@@ -107,11 +107,13 @@ my_load_dir_files :: proc(
 }
 
 load_dir_files :: proc(
-	dir: cstring,
+	dir: string,
 	dirs_allocator := context.allocator,
 	strs_allocator := context.allocator,
 ) -> []string {
-	dir_files := my_load_dir_files(dir, dirs_allocator, strs_allocator)
+	c_dir := strings.clone_to_cstring(dir, context.temp_allocator)
+	dir_files := my_load_dir_files(c_dir, dirs_allocator, strs_allocator)
+	delete(c_dir, context.temp_allocator)
 	slice.sort_by(dir_files[:], proc(a: string, b: string) -> bool {
 		xl, yl :=
 			strings.to_lower(a, context.temp_allocator),
@@ -163,9 +165,7 @@ main :: proc() {
 	}
 
 	cwd := strings.clone(base_dir)
-	c_cwd := strings.clone_to_cstring(cwd)
-	dir_files := load_dir_files(c_cwd, dirs_allocator, strs_allocator)
-	delete(c_cwd)
+	dir_files := load_dir_files(cwd, dirs_allocator, strs_allocator)
 
 	font := rl.GetFontDefault()
 
@@ -231,11 +231,9 @@ main :: proc() {
 					if rl.DirectoryExists(c_path) {
 						delete(cwd)
 						cwd = strings.clone(path)
-						c_cwd = strings.clone_to_cstring(cwd)
 						free_all(strs_allocator)
 						free_all(dirs_allocator)
-						dir_files = load_dir_files(c_cwd, dirs_allocator, strs_allocator)
-						delete(c_cwd)
+						dir_files = load_dir_files(cwd, dirs_allocator, strs_allocator)
 						base_start = 0
 						for base_start < len(dir_files) {
 							parts := strings.split(dir_files[base_start], "/")
@@ -279,11 +277,9 @@ main :: proc() {
 					new_cwd := strings.join(up_until, "/")
 					delete(cwd)
 					cwd = new_cwd
-					c_cwd = strings.clone_to_cstring(cwd)
 					free_all(strs_allocator)
 					free_all(dirs_allocator)
-					dir_files = load_dir_files(c_cwd, dirs_allocator, strs_allocator)
-					delete(c_cwd)
+					dir_files = load_dir_files(cwd, dirs_allocator, strs_allocator)
 					base_start = 0
 					for base_start < len(dir_files) {
 						parts := strings.split(dir_files[base_start], "/")
