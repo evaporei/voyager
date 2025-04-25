@@ -227,10 +227,18 @@ dir_state_pool_push :: proc(pool: ^Dir_State_Pool, path: string) -> ^Dir_State {
 
 main :: proc() {
 	rl.SetTraceLogLevel(.WARNING)
+	// rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_HIGHDPI, .MSAA_4X_HINT})
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "voyager")
 	defer rl.CloseWindow()
 
 	font := rl.GetFontDefault()
+	// font := rl.LoadFontEx(
+	//  "very cool font.ttf"
+	// 	FONT_SIZE,
+	// 	nil,
+	// 	0x017F,
+	// )
+	// rl.SetTextureFilter(font.texture, .TRILINEAR)
 
 	dir_pool: Dir_State_Pool
 
@@ -288,7 +296,7 @@ main :: proc() {
 			rl.DrawTextEx(font, c_file, {0, y}, FONT_SIZE, FONT_SPACING, rl.WHITE)
 		}
 
-		rl.DrawRectangle(0, 0, WINDOW_WIDTH, 20, rl.BLACK)
+		rl.DrawRectangleRec({0, 0, WINDOW_WIDTH, FONT_SIZE}, rl.BLACK)
 
 		parts := strings.split(dir.cwd, "/")
 		x: f32 = 0
