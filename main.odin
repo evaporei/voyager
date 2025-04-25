@@ -1,6 +1,9 @@
 package voyager
 
+import "base:runtime"
 import "core:fmt"
+import "core:mem"
+import vmem "core:mem/virtual"
 import "core:os"
 import "core:slice"
 import "core:strings"
@@ -21,13 +24,17 @@ get_homedir :: proc() -> string {
 	}
 }
 
-load_dir_files :: proc(dir: cstring) -> []string {
+load_dir_files :: proc(
+	dir: cstring,
+	dirs_allocator := context.allocator,
+	strs_allocator := context.allocator,
+) -> []string {
 	c_dir_files := rl.LoadDirectoryFiles(dir)
 	defer rl.UnloadDirectoryFiles(c_dir_files)
-	dir_files := make([]string, c_dir_files.count)
+	dir_files := make([]string, c_dir_files.count, dirs_allocator)
 	for i in 0 ..< c_dir_files.count {
 		path := c_dir_files.paths[i]
-		dir_files[i] = strings.clone_from_cstring(path)
+		dir_files[i] = strings.clone_from_cstring(path, strs_allocator)
 	}
 	slice.sort_by(dir_files, proc(a: string, b: string) -> bool {
 		xl, yl := strings.to_lower(a), strings.to_lower(b)
@@ -56,10 +63,20 @@ main :: proc() {
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "voyager")
 	defer rl.CloseWindow()
 
+	dirs_arena: vmem.Arena
+	err := vmem.arena_init_growing(&dirs_arena, 100 * mem.Megabyte)
+	assert(err == .None)
+	dirs_allocator := vmem.arena_allocator(&dirs_arena)
+
+	strs_arena: vmem.Arena
+	err = vmem.arena_init_growing(&strs_arena, 100 * mem.Megabyte)
+	assert(err == .None)
+	strs_allocator := vmem.arena_allocator(&strs_arena)
+
 	cwd := strings.clone(get_homedir())
 	// cwd := strings.clone("/Volumes/nas/slow/music")
 	c_cwd := strings.clone_to_cstring(cwd)
-	dir_files := load_dir_files(c_cwd)
+	dir_files := load_dir_files(c_cwd, dirs_allocator, strs_allocator)
 
 	font := rl.GetFontDefault()
 
@@ -129,9 +146,9 @@ main :: proc() {
 						cwd = strings.clone(path)
 						delete(c_cwd)
 						c_cwd = strings.clone_to_cstring(cwd)
-						for path in dir_files do delete(path)
-						delete(dir_files)
-						dir_files = load_dir_files(c_cwd)
+						free_all(strs_allocator)
+						free_all(dirs_allocator)
+						dir_files = load_dir_files(c_cwd, dirs_allocator, strs_allocator)
 						base_start = 0
 						for base_start < len(dir_files) {
 							parts := strings.split(dir_files[base_start], "/")
@@ -177,9 +194,9 @@ main :: proc() {
 					cwd = new_cwd
 					delete(c_cwd)
 					c_cwd = strings.clone_to_cstring(cwd)
-					for path in dir_files do delete(path)
-					delete(dir_files)
-					dir_files = load_dir_files(c_cwd)
+					free_all(strs_allocator)
+					free_all(dirs_allocator)
+					dir_files = load_dir_files(c_cwd, dirs_allocator, strs_allocator)
 					base_start = 0
 					for base_start < len(dir_files) {
 						parts := strings.split(dir_files[base_start], "/")
