@@ -163,16 +163,22 @@ dir_state_init :: proc(dir: ^Dir_State) -> mem.Allocator_Error {
 	return .None
 }
 
+dir_state_unload :: proc(dir: ^Dir_State) {
+	delete(dir.cwd)
+	free_all(dir.strs_allocator)
+	free_all(dir.dirs_allocator)
+}
+
 dir_state_load :: proc(dir: ^Dir_State, path: string) {
 	dir_state_unload(dir)
 	dir.cwd = strings.clone(path)
 	dir.files = load_dir_files(dir.cwd, dir.dirs_allocator, dir.strs_allocator)
 }
 
-dir_state_unload :: proc(dir: ^Dir_State) {
-	delete(dir.cwd)
-	free_all(dir.strs_allocator)
-	free_all(dir.dirs_allocator)
+dir_state_reload :: proc(dir: ^Dir_State) {
+	tmp_cwd := strings.clone(dir.cwd, context.temp_allocator)
+	dir_state_load(dir, tmp_cwd)
+	delete(tmp_cwd, context.temp_allocator)
 }
 
 Dir_Offsets :: struct {
@@ -231,13 +237,6 @@ dir_state_pool_push :: proc(pool: ^Dir_State_Pool, path: string) -> ^Dir_State {
 	return &pool.dirs[count]
 }
 
-dir_state_pool_reload :: proc(pool: ^Dir_State_Pool, dir: ^Dir_State) -> ^Dir_State {
-	dir_cwd_copy := strings.clone(dir.cwd, context.temp_allocator)
-	dir_state_load(dir, dir_cwd_copy)
-	delete(dir_cwd_copy, context.temp_allocator)
-	return dir
-}
-
 main :: proc() {
 	rl.SetTraceLogLevel(.WARNING)
 	// rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_HIGHDPI, .MSAA_4X_HINT})
@@ -281,7 +280,7 @@ main :: proc() {
 		}
 
 		if rl.IsKeyPressed(.F5) {
-			dir = dir_state_pool_reload(&dir_pool, dir)
+			dir_state_reload(dir)
 			dir_offsets_init(&offsets, dir^)
 		}
 
