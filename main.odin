@@ -187,7 +187,6 @@ dir_offsets_init :: proc(offsets: ^Dir_Offsets, dir: Dir_State) {
 	}
 	start = base_start
 	end = min(ELEMENT_SIZE + start, len(dir.files))
-	// fmt.println(len(dir.files), base_start, start, end)
 	bigger_than_screen = len(dir.files) - base_start >= ELEMENT_SIZE
 	base_y_offset = f32(start - 0) * -ELEMENT_SIZE / 2
 	y_offset = base_y_offset
@@ -196,20 +195,7 @@ dir_offsets_init :: proc(offsets: ^Dir_Offsets, dir: Dir_State) {
 dir_offsets_update :: proc(offsets: ^Dir_Offsets, dir: Dir_State, mouse_delta: f32) {
 	using offsets
 	if !bigger_than_screen do return
-	// if offset != 0 {
-	// fmt.println(
-	// 	"wheelMove() =",
-	// 	rl.GetMouseWheelMove(),
-	// 	" offset =",
-	// 	offset,
-	// 	" y_offset =",
-	// 	y_offset,
-	// )
-	// y_offset = max(min(0, y_offset + offset), -WINDOW_HEIGHT * 1.5)
-	y_offset = max(
-		min(y_offset + mouse_delta, base_y_offset), // y_offset + offset,
-		-f32(len(dir.files)) * FONT_SIZE,
-	)
+	y_offset = max(min(y_offset + mouse_delta, base_y_offset), -f32(len(dir.files)) * FONT_SIZE)
 	// maybe use base_y_offset here instead of int(-y_offset) / FONT_SIZE
 	start = max(base_start, min(int(-y_offset) / FONT_SIZE, len(dir.files) - 1))
 	end = max(1, min(ELEMENT_SIZE + start, len(dir.files)))
@@ -250,7 +236,6 @@ main :: proc() {
 		if mouse_delta != 0 {
 			dir_offsets_update(&offsets, dir, mouse_delta)
 		}
-		// fmt.println(offsets.start, offsets.end)
 
 		for path, i in dir.files[offsets.start:offsets.end] {
 			c_path := strings.clone_to_cstring(path, context.temp_allocator)
@@ -265,7 +250,6 @@ main :: proc() {
 					if rl.DirectoryExists(c_path) {
 						dir_state_load(&dir, path)
 						dir_offsets_init(&offsets, dir)
-						// fmt.println(len(dir.files), start, end)
 						continue outer
 					} else {
 						open_file(c_path)
@@ -295,7 +279,6 @@ main :: proc() {
 					dir_state_load(&dir, new_cwd)
 					delete(new_cwd, context.temp_allocator)
 					dir_offsets_init(&offsets, dir)
-					// fmt.println(len(dir.files), start, end)
 					break
 				}
 				color := rl.LIME
@@ -312,6 +295,4 @@ main :: proc() {
 
 		free_all(context.temp_allocator)
 	}
-	// fmt.println(dirs_arena.total_used)
-	// fmt.println(strs_arena.total_used)
 }
