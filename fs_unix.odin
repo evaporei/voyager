@@ -10,37 +10,37 @@ _os_load_dir_files :: proc(
 	basePath: cstring,
 	dirs_allocator := context.allocator,
 	strs_allocator := context.allocator,
-) -> [dynamic]string {
-	files := make([dynamic]string, dirs_allocator)
-
-	dp: ^posix.dirent
+) -> (
+	files: [dynamic]string,
+) {
 	dir := posix.opendir(basePath)
 
-	if dir != nil {
-		dp = posix.readdir(dir)
-		for dp != nil {
-			d_name := cstring(raw_data(&dp.d_name))
-			if string(d_name) != "." && string(d_name) != ".." {
-				b: strings.Builder
-				strings.builder_init_len_cap(
-					&b,
-					0,
-					len(d_name) + 1 + len(basePath),
-					context.temp_allocator,
-				)
-				defer strings.builder_destroy(&b)
-
-				strings.write_string(&b, string(basePath))
-				strings.write_string(&b, "/")
-				strings.write_string(&b, string(d_name))
-
-				append(&files, strings.clone(strings.to_string(b), strs_allocator))
-			}
-			dp = posix.readdir(dir)
-		}
-		posix.closedir(dir)
-	} else {
+	if dir == nil {
 		fmt.println("FILEIO: Directory cannot be opened", basePath)
+		return
+	}
+	defer posix.closedir(dir)
+
+	files = make([dynamic]string, dirs_allocator)
+
+	for dp := posix.readdir(dir); dp != nil; dp = posix.readdir(dir) {
+		d_name := cstring(raw_data(&dp.d_name))
+		if string(d_name) == "." || string(d_name) == ".." do continue
+
+		b: strings.Builder
+		strings.builder_init_len_cap(
+			&b,
+			0,
+			len(d_name) + 1 + len(basePath),
+			context.temp_allocator,
+		)
+		defer strings.builder_destroy(&b)
+
+		strings.write_string(&b, string(basePath))
+		strings.write_string(&b, "/")
+		strings.write_string(&b, string(d_name))
+
+		append(&files, strings.clone(strings.to_string(b), strs_allocator))
 	}
 
 	return files
