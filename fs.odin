@@ -4,7 +4,7 @@ import "core:os"
 import "core:slice"
 import "core:strings"
 
-get_homedir :: proc() -> string {
+os_get_homedir :: proc() -> string {
 	when ODIN_OS == .Windows {
 		return os.get_env("USERPROFILE")
 	} else {
@@ -12,13 +12,13 @@ get_homedir :: proc() -> string {
 	}
 }
 
-load_dir_files :: proc(
+os_load_dir_files :: proc(
 	dir: string,
 	files_allocator := context.allocator,
 	strs_allocator := context.allocator,
 ) -> []string {
 	c_dir := strings.clone_to_cstring(dir, context.temp_allocator)
-	dir_files := os_load_dir_files(c_dir, files_allocator, strs_allocator)
+	dir_files := _os_load_dir_files(c_dir, files_allocator, strs_allocator)
 	delete(c_dir, context.temp_allocator)
 	slice.sort_by(dir_files[:], proc(a: string, b: string) -> bool {
 		return(

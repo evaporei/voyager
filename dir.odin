@@ -30,7 +30,7 @@ dir_state_unload :: proc(dir: ^Dir_State) {
 dir_state_load :: proc(dir: ^Dir_State, path: string) {
 	dir_state_unload(dir)
 	dir.cwd = strings.clone(path)
-	dir.files = load_dir_files(dir.cwd, dir.files_allocator, dir.strs_allocator)
+	dir.files = os_load_dir_files(dir.cwd, dir.files_allocator, dir.strs_allocator)
 }
 
 dir_state_reload :: proc(dir: ^Dir_State) {

@@ -56,7 +56,7 @@ main :: proc() {
 		// also, should scape last slash if sent
 		init_dir = os.args[1]
 	} else {
-		init_dir = get_homedir()
+		init_dir = os_get_homedir()
 	}
 
 	dir := dir_state_pool_push(&dir_pool, init_dir)
