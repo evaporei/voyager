@@ -52,7 +52,7 @@ main :: proc() {
 	init_dir: string
 	if len(os.args) > 1 {
 		// TODO:
-		// gets funky on windows because of double slashed
+		// gets funky on windows because of double slash
 		// also, should scape last slash if sent
 		init_dir = os.args[1]
 	} else {
@@ -69,7 +69,6 @@ main :: proc() {
 
 		mouse_pos := rl.GetMousePosition()
 		mouse_clicked := rl.IsMouseButtonPressed(.LEFT)
-
 		mouse_delta := rl.GetMouseWheelMove() * SCROLL_SPEED * rl.GetFrameTime()
 
 		if mouse_delta != 0 {
@@ -113,7 +112,8 @@ main :: proc() {
 
 		rl.DrawRectangleRec({0, 0, WINDOW_WIDTH, FONT_SIZE}, rl.BLACK)
 
-		parts := strings.split(dir.cwd, DIVISOR)
+		parts := strings.split(dir.cwd, DIVISOR, context.temp_allocator)
+		defer delete(parts, context.temp_allocator)
 		x: f32 = 0
 		for &part, i in parts {
 			c_part := strings.clone_to_cstring(part, context.temp_allocator)
