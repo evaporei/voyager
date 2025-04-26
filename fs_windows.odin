@@ -43,10 +43,8 @@ scan_dir_files :: proc(
 
             strings.write_string(&b, string(basePath))
             strings.write_string(&b, "\\")
-            i := 0
-            for find_file_data.cFileName[i] != 0 {
+            for i := 0; find_file_data.cFileName[i] != 0; i += 1 {
                 strings.write_rune(&b, rune(find_file_data.cFileName[i]))
-                i += 1
             }
             append(&files, strings.clone(strings.to_string(b), strs_allocator))
         }
