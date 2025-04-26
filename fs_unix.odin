@@ -6,7 +6,7 @@ import "core:os"
 import "core:strings"
 import "core:sys/posix"
 
-scan_dir_files :: proc(
+_os_load_dir_files :: proc(
 	basePath: cstring,
 	dirs_allocator := context.allocator,
 	strs_allocator := context.allocator,

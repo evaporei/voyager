@@ -6,7 +6,7 @@ import "core:strings"
 import win32 "core:sys/windows"
 import "core:slice"
 
-scan_dir_files :: proc(
+_os_load_dir_files :: proc(
 	basePath: cstring,
 	dirs_allocator := context.allocator,
 	strs_allocator := context.allocator,

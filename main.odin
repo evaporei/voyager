@@ -5,7 +5,6 @@ import "core:fmt"
 import "core:mem"
 import vmem "core:mem/virtual"
 import "core:os"
-import "core:slice"
 import "core:strings"
 
 import rl "vendor:raylib"
@@ -34,31 +33,6 @@ when ODIN_OS == .Darwin {
 }
 FONT_SPACING :: FONT_SIZE / 10
 ELEMENT_SIZE :: WINDOW_HEIGHT / FONT_SIZE
-
-get_homedir :: proc() -> string {
-	when ODIN_OS == .Windows {
-		return os.get_env("USERPROFILE")
-	} else {
-		return os.get_env("HOME")
-	}
-}
-
-load_dir_files :: proc(
-	dir: string,
-	dirs_allocator := context.allocator,
-	strs_allocator := context.allocator,
-) -> []string {
-	c_dir := strings.clone_to_cstring(dir, context.temp_allocator)
-	dir_files := scan_dir_files(c_dir, dirs_allocator, strs_allocator)
-	delete(c_dir, context.temp_allocator)
-	slice.sort_by(dir_files[:], proc(a: string, b: string) -> bool {
-		xl, yl :=
-			strings.to_lower(a, context.temp_allocator),
-			strings.to_lower(b, context.temp_allocator)
-		return xl < yl
-	})
-	return dir_files[:]
-}
 
 Dir_State :: struct {
 	dirs_arena:     vmem.Arena,
