@@ -8,7 +8,7 @@ import win32 "core:sys/windows"
 
 os_load_dir_files :: proc(
 	base_path: cstring,
-	dirs_allocator := context.allocator,
+	files_allocator := context.allocator,
 	strs_allocator := context.allocator,
 ) -> (
 	files: [dynamic]string,
@@ -29,7 +29,7 @@ os_load_dir_files :: proc(
 	}
 	defer win32.FindClose(h_find)
 
-	files = make([dynamic]string, dirs_allocator)
+	files = make([dynamic]string, files_allocator)
 	for {
 		if find_file_data.cFileName[0] != '.' &&
 		   !slice.equal(find_file_data.cFileName[0:2], []u16{'.', '.'}) {
