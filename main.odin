@@ -7,14 +7,13 @@ import vmem "core:mem/virtual"
 import "core:os"
 import "core:slice"
 import "core:strings"
-import "core:sys/posix"
 
 import rl "vendor:raylib"
 
 when ODIN_OS == .Windows {
-    DIVISOR :: "\\"
+	DIVISOR :: "\\"
 } else {
-    DIVISOR :: "/"
+	DIVISOR :: "/"
 }
 
 when ODIN_OS == .Darwin {
@@ -172,8 +171,8 @@ main :: proc() {
 
 	init_dir: string
 	if len(os.args) > 1 {
-	    // TODO:
-	    // gets funky on windows because of double slashed
+		// TODO:
+		// gets funky on windows because of double slashed
 		// also, should scape last slash if sent
 		init_dir = os.args[1]
 	} else {
@@ -257,9 +256,9 @@ main :: proc() {
 			rl.DrawTextEx(font, c_part, {x, 0}, FONT_SIZE, FONT_SPACING, rl.WHITE)
 			x += part_size.x
 			when ODIN_OS == .Windows {
-			    divisor_w_space :cstring = " \\ "
+				divisor_w_space: cstring = " \\ "
 			} else {
-			    divisor_w_space :cstring= " / "
+				divisor_w_space: cstring = " / "
 			}
 			rl.DrawTextEx(font, divisor_w_space, {x, 0}, FONT_SIZE, FONT_SPACING, rl.WHITE)
 			x += rl.MeasureTextEx(font, divisor_w_space, FONT_SIZE, FONT_SPACING).x

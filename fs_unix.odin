@@ -1,6 +1,11 @@
 #+build linux, darwin, freebsd, openbsd, netbsd, haiku
 package voyager
 
+import "core:fmt"
+import "core:os"
+import "core:strings"
+import "core:sys/posix"
+
 scan_dir_files :: proc(
 	basePath: cstring,
 	dirs_allocator := context.allocator,
