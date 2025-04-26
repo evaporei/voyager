@@ -51,10 +51,14 @@ main :: proc() {
 
 	init_dir: string
 	if len(os.args) > 1 {
-		// TODO:
-		// gets funky on windows because of double slash
-		// also, should scape last slash if sent
 		init_dir = os.args[1]
+		// TODO: should scape last slash if sent
+		// if strings.ends_with(init_dir, DIVISOR) {
+		// 	init_dir = init_dir[:len(init_dir) - 2]
+		// }
+		if ODIN_OS == .Windows {
+			init_dir, _ = strings.replace_all(init_dir, "\\\\", "\\", context.temp_allocator)
+		}
 	} else {
 		init_dir = os_get_homedir()
 	}
