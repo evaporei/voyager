@@ -11,6 +11,12 @@ import "core:sys/posix"
 
 import rl "vendor:raylib"
 
+when ODIN_OS == .Windows {
+    DIVISOR :: "\\"
+} else {
+    DIVISOR :: "/"
+}
+
 when ODIN_OS == .Darwin {
 	// WINDOW_WIDTH, WINDOW_HEIGHT :: 1920, 1080
 	WINDOW_WIDTH, WINDOW_HEIGHT :: 1280, 720
@@ -38,50 +44,6 @@ get_homedir :: proc() -> string {
 	}
 }
 
-scan_dir_files :: proc(
-	basePath: cstring,
-	dirs_allocator := context.allocator,
-	strs_allocator := context.allocator,
-) -> [dynamic]string {
-	files := make([dynamic]string, dirs_allocator)
-
-	dp: ^posix.dirent
-	dir := posix.opendir(basePath)
-
-	if dir != nil {
-		dp = posix.readdir(dir)
-		for dp != nil {
-			d_name := cstring(raw_data(&dp.d_name))
-			if string(d_name) != "." && string(d_name) != ".." {
-				b: strings.Builder
-				strings.builder_init_len_cap(
-					&b,
-					0,
-					len(d_name) + 1 + len(basePath),
-					context.temp_allocator,
-				)
-				defer strings.builder_destroy(&b)
-
-				strings.write_string(&b, string(basePath))
-				when ODIN_OS == .Windows {
-					strings.write_string(&b, "\\")
-				} else {
-					strings.write_string(&b, "/")
-				}
-				strings.write_string(&b, string(d_name))
-
-				append(&files, strings.clone(strings.to_string(b), strs_allocator))
-			}
-			dp = posix.readdir(dir)
-		}
-		posix.closedir(dir)
-	} else {
-		fmt.println("FILEIO: Directory cannot be opened", basePath)
-	}
-
-	return files
-}
-
 load_dir_files :: proc(
 	dir: string,
 	dirs_allocator := context.allocator,
@@ -97,25 +59,6 @@ load_dir_files :: proc(
 		return xl < yl
 	})
 	return dir_files[:]
-}
-
-open_file :: proc(file: cstring) {
-	pid := posix.fork()
-	if pid < 0 {
-		fmt.println("kaboom man")
-		os.exit(1)
-	} else if pid == 0 {
-		// fmt.println("child")
-		when ODIN_OS == .Darwin {
-			args := []cstring{"open", file, nil}
-			os.exit(int(posix.execv("/usr/bin/open", raw_data(args))))
-		} else when ODIN_OS == .Linux {
-			args := []cstring{"xdg-open", file, nil}
-			os.exit(int(posix.execv("/usr/bin/xdg-open", raw_data(args))))
-		}
-	} else {
-		// fmt.println("woo parent!")
-	}
 }
 
 Dir_State :: struct {
@@ -163,7 +106,7 @@ dir_offsets_init :: proc(offsets: ^Dir_Offsets, dir: Dir_State) {
 	using offsets
 	base_start = 0
 	for base_start < len(dir.files) {
-		parts := strings.split(dir.files[base_start], "/")
+		parts := strings.split(dir.files[base_start], DIVISOR)
 		if strings.starts_with(parts[len(parts) - 1], ".") {
 			base_start += 1
 		} else {
@@ -229,6 +172,9 @@ main :: proc() {
 
 	init_dir: string
 	if len(os.args) > 1 {
+	    // TODO:
+	    // gets funky on windows because of double slashed
+		// also, should scape last slash if sent
 		init_dir = os.args[1]
 	} else {
 		init_dir = get_homedir()
@@ -288,7 +234,7 @@ main :: proc() {
 
 		rl.DrawRectangleRec({0, 0, WINDOW_WIDTH, FONT_SIZE}, rl.BLACK)
 
-		parts := strings.split(dir.cwd, "/")
+		parts := strings.split(dir.cwd, DIVISOR)
 		x: f32 = 0
 		for &part, i in parts {
 			c_part := strings.clone_to_cstring(part, context.temp_allocator)
@@ -298,7 +244,7 @@ main :: proc() {
 			if rl.CheckCollisionPointRec(mouse_pos, rect) {
 				if mouse_clicked && i != len(parts) - 1 {
 					up_until := parts[:i + 1]
-					new_cwd := strings.join(up_until, "/", context.temp_allocator)
+					new_cwd := strings.join(up_until, DIVISOR, context.temp_allocator)
 					dir = dir_state_pool_push(&dir_pool, new_cwd)
 					delete(new_cwd, context.temp_allocator)
 					dir_offsets_init(&offsets, dir^)
@@ -310,8 +256,13 @@ main :: proc() {
 			}
 			rl.DrawTextEx(font, c_part, {x, 0}, FONT_SIZE, FONT_SPACING, rl.WHITE)
 			x += part_size.x
-			rl.DrawTextEx(font, " / ", {x, 0}, FONT_SIZE, FONT_SPACING, rl.WHITE)
-			x += rl.MeasureTextEx(font, " / ", FONT_SIZE, FONT_SPACING).x
+			when ODIN_OS == .Windows {
+			    divisor_w_space :cstring = " \\ "
+			} else {
+			    divisor_w_space :cstring= " / "
+			}
+			rl.DrawTextEx(font, divisor_w_space, {x, 0}, FONT_SIZE, FONT_SPACING, rl.WHITE)
+			x += rl.MeasureTextEx(font, divisor_w_space, FONT_SIZE, FONT_SPACING).x
 		}
 
 		rl.DrawLine(0, FONT_SIZE, WINDOW_WIDTH, FONT_SIZE, rl.SKYBLUE)
