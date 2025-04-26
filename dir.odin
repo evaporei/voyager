@@ -5,17 +5,17 @@ import vmem "core:mem/virtual"
 import "core:strings"
 
 Dir_State :: struct {
-	dirs_arena:     vmem.Arena,
-	dirs_allocator: mem.Allocator,
-	strs_arena:     vmem.Arena,
-	strs_allocator: mem.Allocator,
-	cwd:            string,
-	files:          []string,
+	files_arena:     vmem.Arena,
+	files_allocator: mem.Allocator,
+	strs_arena:      vmem.Arena,
+	strs_allocator:  mem.Allocator,
+	cwd:             string,
+	files:           []string,
 }
 
 dir_state_init :: proc(dir: ^Dir_State) -> mem.Allocator_Error {
-	vmem.arena_init_growing(&dir.dirs_arena, 1 * mem.Megabyte) or_return
-	dir.dirs_allocator = vmem.arena_allocator(&dir.dirs_arena)
+	vmem.arena_init_growing(&dir.files_arena, 1 * mem.Megabyte) or_return
+	dir.files_allocator = vmem.arena_allocator(&dir.files_arena)
 	vmem.arena_init_growing(&dir.strs_arena, 5 * mem.Megabyte) or_return
 	dir.strs_allocator = vmem.arena_allocator(&dir.strs_arena)
 	return .None
@@ -24,13 +24,13 @@ dir_state_init :: proc(dir: ^Dir_State) -> mem.Allocator_Error {
 dir_state_unload :: proc(dir: ^Dir_State) {
 	delete(dir.cwd)
 	free_all(dir.strs_allocator)
-	free_all(dir.dirs_allocator)
+	free_all(dir.files_allocator)
 }
 
 dir_state_load :: proc(dir: ^Dir_State, path: string) {
 	dir_state_unload(dir)
 	dir.cwd = strings.clone(path)
-	dir.files = load_dir_files(dir.cwd, dir.dirs_allocator, dir.strs_allocator)
+	dir.files = load_dir_files(dir.cwd, dir.files_allocator, dir.strs_allocator)
 }
 
 dir_state_reload :: proc(dir: ^Dir_State) {

@@ -6,22 +6,22 @@ import "core:os"
 import "core:strings"
 import "core:sys/posix"
 
-_os_load_dir_files :: proc(
-	basePath: cstring,
-	dirs_allocator := context.allocator,
+os_load_dir_files :: proc(
+	base_path: cstring,
+	files_allocator := context.allocator,
 	strs_allocator := context.allocator,
 ) -> (
 	files: [dynamic]string,
 ) {
-	dir := posix.opendir(basePath)
+	dir := posix.opendir(base_path)
 
 	if dir == nil {
-		fmt.println("FILEIO: Directory cannot be opened", basePath)
+		fmt.println("FILEIO: Directory cannot be opened", base_path)
 		return
 	}
 	defer posix.closedir(dir)
 
-	files = make([dynamic]string, dirs_allocator)
+	files = make([dynamic]string, files_allocator)
 
 	for dp := posix.readdir(dir); dp != nil; dp = posix.readdir(dir) {
 		d_name := cstring(raw_data(&dp.d_name))
@@ -31,12 +31,12 @@ _os_load_dir_files :: proc(
 		strings.builder_init_len_cap(
 			&b,
 			0,
-			len(d_name) + 1 + len(basePath),
+			len(d_name) + 1 + len(base_path),
 			context.temp_allocator,
 		)
 		defer strings.builder_destroy(&b)
 
-		strings.write_string(&b, string(basePath))
+		strings.write_string(&b, string(base_path))
 		strings.write_string(&b, "/")
 		strings.write_string(&b, string(d_name))
 
@@ -46,7 +46,7 @@ _os_load_dir_files :: proc(
 	return files
 }
 
-open_file :: proc(file: cstring) {
+os_open_file_w_default_app :: proc(file: cstring) {
 	pid := posix.fork()
 	if pid < 0 {
 		fmt.println("kaboom man")

@@ -99,7 +99,7 @@ main :: proc() {
 						dir_offsets_init(&offsets, dir^)
 						continue outer
 					} else {
-						open_file(c_path)
+						os_open_file_w_default_app(c_path)
 					}
 				}
 				color.rgb = rl.LIME.rgb
