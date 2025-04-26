@@ -16,7 +16,7 @@ scan_dir_files :: proc(
     find_file_data: win32.WIN32_FIND_DATAW
     h_find := win32.INVALID_HANDLE_VALUE
 
-    w_base_path := make([]u16, len(basePath) + 3)
+    w_base_path := make([]u16, len(basePath) + 3, context.temp_allocator)
     for ch, i in string(basePath) {
         w_base_path[i] = u16(ch)
     }
@@ -25,7 +25,7 @@ scan_dir_files :: proc(
     w_base_path[len(w_base_path) - 1] = 0
 
     h_find = win32.FindFirstFileW(raw_data(w_base_path), &find_file_data)
-    delete(w_base_path)
+    delete(w_base_path, context.temp_allocator)
     if h_find == win32.INVALID_HANDLE_VALUE {
         fmt.eprintln("FindFirstFile failed for file", basePath, win32.GetLastError())
         return nil
@@ -58,6 +58,11 @@ scan_dir_files :: proc(
 }
 
 open_file :: proc(file: cstring) {
-    // args := []cstring{"xdg-open", file, nil}
-    // os.exit(int(posix.execv("/usr/bin/xdg-open", raw_data(args))))
+    w_file := make([]u16, len(file) + 1, context.temp_allocator)
+    for ch, i in string(file) {
+        w_file[i] = u16(ch)
+    }
+    w_file[len(w_file) - 1] = 0
+    win32.ShellExecuteW(nil, win32.L("open"), raw_data(w_file), nil, nil, win32.SW_SHOWNORMAL)
+    delete(w_file, context.temp_allocator)
 }
