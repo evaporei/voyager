@@ -10,12 +10,7 @@ _os_load_dir_files :: proc(
 	basePath: cstring,
 	dirs_allocator := context.allocator,
 	strs_allocator := context.allocator,
-) -> [dynamic]string {
-    files := make([dynamic]string, dirs_allocator)
-
-    find_file_data: win32.WIN32_FIND_DATAW
-    h_find := win32.INVALID_HANDLE_VALUE
-
+) -> (files: [dynamic]string) {
     w_base_path := make([]u16, len(basePath) + 3, context.temp_allocator)
     for ch, i in string(basePath) {
         w_base_path[i] = u16(ch)
@@ -24,12 +19,16 @@ _os_load_dir_files :: proc(
     w_base_path[len(w_base_path) - 2] = '*'
     w_base_path[len(w_base_path) - 1] = 0
 
-    h_find = win32.FindFirstFileW(raw_data(w_base_path), &find_file_data)
+    find_file_data: win32.WIN32_FIND_DATAW
+    h_find := win32.FindFirstFileW(raw_data(w_base_path), &find_file_data)
     delete(w_base_path, context.temp_allocator)
     if h_find == win32.INVALID_HANDLE_VALUE {
         fmt.eprintln("FindFirstFile failed for file", basePath, win32.GetLastError())
-        return nil
+        return
     }
+    defer win32.FindClose(h_find)
+
+    files = make([dynamic]string, dirs_allocator)
     for {
         if find_file_data.cFileName[0] != '.' && !slice.equal(find_file_data.cFileName[0:2], []u16{'.', '.'}) {
             b: strings.Builder
@@ -50,7 +49,6 @@ _os_load_dir_files :: proc(
         }
         if win32.FindNextFileW(h_find, &find_file_data) == transmute(win32.BOOL)i32(0) do break;
     }
-    win32.FindClose(h_find)
 
     return files
 }
