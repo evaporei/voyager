@@ -90,7 +90,6 @@ main :: proc() {
 
 		for &path, i in dir.files[offsets.start:offsets.end] {
 			c_path := strings.clone_to_cstring(path, context.temp_allocator)
-			defer delete(c_path, context.temp_allocator)
 			c_file := rl.GetFileName(c_path)
 			y := f32(i) * FONT_SIZE + FONT_SIZE
 
@@ -117,11 +116,9 @@ main :: proc() {
 		rl.DrawRectangleRec({0, 0, WINDOW_WIDTH, FONT_SIZE}, rl.BLACK)
 
 		parts := strings.split(dir.cwd, DIVISOR, context.temp_allocator)
-		defer delete(parts, context.temp_allocator)
 		x: f32 = 0
 		for &part, i in parts {
 			c_part := strings.clone_to_cstring(part, context.temp_allocator)
-			defer delete(c_part, context.temp_allocator)
 			part_size := rl.MeasureTextEx(font, c_part, FONT_SIZE, FONT_SPACING)
 			rect := rl.Rectangle{f32(x), 0, part_size.x, FONT_SIZE}
 			if rl.CheckCollisionPointRec(mouse_pos, rect) {
@@ -129,7 +126,6 @@ main :: proc() {
 					up_until := parts[:i + 1]
 					new_cwd := strings.join(up_until, DIVISOR, context.temp_allocator)
 					dir = dir_state_pool_push(&dir_pool, new_cwd)
-					delete(new_cwd, context.temp_allocator)
 					dir_offsets_init(&offsets, dir^)
 					break
 				}

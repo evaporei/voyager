@@ -36,7 +36,6 @@ dir_state_load :: proc(dir: ^Dir_State, path: string) {
 dir_state_reload :: proc(dir: ^Dir_State) {
 	tmp_cwd := strings.clone(dir.cwd, context.temp_allocator)
 	dir_state_load(dir, tmp_cwd)
-	delete(tmp_cwd, context.temp_allocator)
 }
 
 Dir_Offsets :: struct {

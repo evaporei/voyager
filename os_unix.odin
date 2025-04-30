@@ -34,7 +34,6 @@ _os_load_dir_files :: proc(
 			len(d_name) + 1 + len(base_path),
 			context.temp_allocator,
 		)
-		defer strings.builder_destroy(&b)
 
 		strings.write_string(&b, string(base_path))
 		strings.write_string(&b, "/")

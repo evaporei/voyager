@@ -21,8 +21,6 @@ _os_load_dir_files :: proc(
 
 	find_file_data: win32.WIN32_FIND_DATAW
 	h_find := win32.FindFirstFileW(raw_data(w_base_path), &find_file_data)
-	delete(w_base_path, context.temp_allocator)
-	strings.builder_destroy(&bb)
 	if h_find == win32.INVALID_HANDLE_VALUE {
 		fmt.eprintln("FindFirstFile failed for file", base_path, win32.GetLastError())
 		return
@@ -40,7 +38,6 @@ _os_load_dir_files :: proc(
 				len(base_path) + 1 + len(find_file_data.cFileName),
 				context.temp_allocator,
 			)
-			defer strings.builder_destroy(&b)
 
 			strings.write_string(&b, string(base_path))
 			strings.write_string(&b, "\\")
@@ -58,5 +55,4 @@ _os_load_dir_files :: proc(
 os_open_file_w_default_app :: proc(file: cstring) {
 	w_file := win32.utf8_to_utf16(string(file), context.temp_allocator)
 	win32.ShellExecuteW(nil, win32.L("open"), raw_data(w_file), nil, nil, win32.SW_SHOWNORMAL)
-	delete(w_file, context.temp_allocator)
 }

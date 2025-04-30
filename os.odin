@@ -19,7 +19,6 @@ os_load_dir_files :: proc(
 ) -> []string {
 	c_dir := strings.clone_to_cstring(dir, context.temp_allocator)
 	dir_files := _os_load_dir_files(c_dir, files_allocator, strs_allocator)
-	delete(c_dir, context.temp_allocator)
 	slice.sort_by(dir_files[:], proc(a: string, b: string) -> bool {
 		return(
 			strings.to_lower(a, context.temp_allocator) <
